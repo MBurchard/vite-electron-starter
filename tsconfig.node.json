@@ -1,0 +1,41 @@
+{
+  "extends": "@tsconfig/node22/tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "paths": {
+      "@common/*": ["./modules/common/src/*"]
+    },
+    "resolveJsonModule": true,
+    "types": ["node"],
+
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "useUnknownInCatchVariables": false,
+
+    "noEmit": true,
+    "removeComments": true,
+    "stripInternal": true,
+
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "modules/common/**/*.ts",
+    "modules/electron/**/*.ts",
+    "vite.config.*",
+    "vitest.config.*"
+  ],
+  "exclude": [
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "node_modules",
+    "coverage",
+    "dist",
+    "dist-electron"
+  ]
+}
