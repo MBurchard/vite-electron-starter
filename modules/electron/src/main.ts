@@ -12,6 +12,7 @@ configureLogging({
   appender: {
     CONSOLE: {
       Class: ConsoleAppender,
+      colored: true,
     },
   },
   root: {
@@ -40,7 +41,7 @@ async function createMainWindow() {
   });
   win.webContents.openDevTools();
   if (process.env.NODE_ENV === 'development' && process.env.VITE_DEV_SERVER_URL) {
-    await win.loadURL(process.env.VITE_DEV_SERVER_URL);
+    await win.loadURL(`${process.env.VITE_DEV_SERVER_URL}main`);
   }
 }
 
