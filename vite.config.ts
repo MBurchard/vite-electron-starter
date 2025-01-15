@@ -1,21 +1,15 @@
 import type {ChildProcess} from 'node:child_process';
 import {spawn} from 'node:child_process';
 import {EventEmitter} from 'node:events';
+import * as fs from 'node:fs';
 import {builtinModules} from 'node:module';
-import {resolve} from 'node:path';
+import path, {resolve} from 'node:path';
 import process from 'node:process';
 import {configureLogging, useLog} from '@mburchard/bit-log';
 import {Ansi} from '@mburchard/bit-log/dist/ansi.js';
 import {ConsoleAppender} from '@mburchard/bit-log/dist/appender/ConsoleAppender.js';
 import electronPath from 'electron';
-import {
-  build,
-  createServer,
-  defineConfig,
-  type Plugin,
-  type PluginOption,
-  type UserConfig,
-} from 'vite';
+import {build, createServer, defineConfig, type Plugin, type PluginOption, type UserConfig} from 'vite';
 
 configureLogging({
   appender: {
@@ -31,6 +25,28 @@ configureLogging({
 });
 
 const log = useLog('vite.config');
+
+interface PageConfig {
+  entry: string;
+  template?: string;
+  title?: string;
+}
+
+interface PagesConfig {
+  [pageName: string]: PageConfig;
+}
+
+const pages: PagesConfig = {
+  main: {
+    entry: 'src/index.ts',
+    template: 'index.html',
+    title: `${process.env.VITE_APP_TITLE || 'Vite-Electron-Starter'} - Version: ${process.env.npm_package_version}`,
+  },
+  popup: {
+    entry: 'src/popup.ts',
+    title: 'My PopUp Title',
+  },
+};
 
 /**
  * IntelliJ is unable to detect, that a Plugin can have this both methods...
@@ -88,6 +104,35 @@ function vitePluginAppDevServer(): CustomPlugin {
     async buildStart() {
       log.info('Serving App Frontend');
       const server = await createServer({
+        plugins: [
+          {
+            name: 'vite-plugin-multi-page',
+            transformIndexHtml(html, ctx) {
+              log.debug('original URL:', ctx.originalUrl);
+              const pageName = ctx.originalUrl?.split('/').filter(Boolean)[0] || 'main';
+              log.debug('pageName:', pageName);
+              const pageConfig = pages[pageName];
+              log.debug('pageConfig:', pageConfig);
+              let htmlTemplate = html;
+              if (!pageConfig) {
+                log.error('no page config found for', pageName);
+                return htmlTemplate;
+              }
+              if (pageConfig.template) {
+                const templatePath = path.resolve('modules/app', pageConfig.template);
+                try {
+                  htmlTemplate = fs.readFileSync(templatePath, 'utf-8');
+                  log.debug('HTML template loaded from', templatePath);
+                } catch (e) {
+                  log.error(`Failed to load template for page: ${Ansi.cyan(pageName)}`, e);
+                }
+              }
+              return htmlTemplate
+                .replace('<%= PAGE_TITLE %>', pageConfig.title || '')
+                .replace('</body>', `  <script type="module" src="./${pageConfig.entry}"></script>\n</body>`);
+            },
+          },
+        ],
         configFile: false,
         root: 'modules/app',
         build: {
@@ -95,6 +140,12 @@ function vitePluginAppDevServer(): CustomPlugin {
           minify: false,
           outDir: '../../dist',
           reportCompressedSize: false,
+          rollupOptions: {
+            input: {
+              main: path.resolve(__dirname, 'modules/app/src/index.ts'),
+              popup: path.resolve(__dirname, 'modules/app/src/popup.ts'),
+            },
+          },
           sourcemap: 'inline',
         },
         resolve: {
