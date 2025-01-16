@@ -34,6 +34,7 @@ export interface ViteElectronConfig {
  * Custom Plugin Interface for Vite with optional hooks.
  */
 export interface CustomPlugin extends Plugin {
-  buildStart?: () => Promise<void>;
-  buildEnd?: () => void;
+  buildStart?: (options: InputOptions) => void;
+  buildEnd?: (error?: Error) => void;
+  closeBundle?: () => Promise<void> | void;
 }
