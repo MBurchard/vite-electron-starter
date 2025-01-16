@@ -45,9 +45,29 @@ async function createMainWindow() {
   }
 }
 
+async function createPopupWindow() {
+  const preloadJS = path.join(__dirname, 'preload.js');
+  log.debug('loading preload script:', preloadJS);
+  const win = new BrowserWindow({
+    height: 400,
+    width: 600,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      preload: preloadJS,
+      sandbox: true,
+      webviewTag: false,
+    },
+  });
+  win.webContents.openDevTools();
+  if (process.env.NODE_ENV === 'development' && process.env.VITE_DEV_SERVER_URL) {
+    await win.loadURL(`${process.env.VITE_DEV_SERVER_URL}popup`);
+  }
+}
+
 log.debug('Hallo Welt');
 
-const test = doSth2('Welt');
+const test = doSth2('Welt 2');
 
 log.debug(`Result: ${test}`);
 log.debug(`Result 2: ${doSth('Hugo')}`);
@@ -55,4 +75,7 @@ log.debug(`Result 2: ${doSth('Hugo')}`);
 app.whenReady().then(async () => {
   log.debug('Electron app is ready');
   await createMainWindow();
+  setTimeout(async () => {
+    await createPopupWindow();
+  }, 5000);
 }).catch(reason => log.error('error during electron app ready:', reason));
