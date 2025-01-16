@@ -27,6 +27,7 @@
   "include": [
     "modules/common/**/*.ts",
     "modules/electron/**/*.ts",
+    "project.config.ts",
     "vite.config.*",
     "vitest.config.*"
   ],

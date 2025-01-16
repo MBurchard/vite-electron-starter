@@ -1,15 +1,17 @@
-import type {ChildProcess} from 'node:child_process';
-import {spawn} from 'node:child_process';
+import type {CustomPlugin, PageConfig} from './vite-env.d.ts';
+import {type ChildProcess, spawn} from 'node:child_process';
 import {EventEmitter} from 'node:events';
-import * as fs from 'node:fs';
+import fs from 'node:fs';
 import {builtinModules} from 'node:module';
-import path, {resolve} from 'node:path';
+import path from 'node:path';
 import process from 'node:process';
 import {configureLogging, useLog} from '@mburchard/bit-log';
 import {Ansi} from '@mburchard/bit-log/dist/ansi.js';
 import {ConsoleAppender} from '@mburchard/bit-log/dist/appender/ConsoleAppender.js';
+import {LogLevel} from '@mburchard/bit-log/dist/definitions.js';
 import electronPath from 'electron';
-import {build, createServer, defineConfig, type Plugin, type PluginOption, type UserConfig} from 'vite';
+import {build, defineConfig, type Plugin, type PluginOption, type UserConfig} from 'vite';
+import {viteElectronConfig as cfg} from './project.config.js';
 
 configureLogging({
   appender: {
@@ -24,163 +26,172 @@ configureLogging({
   },
 });
 
-const log = useLog('vite.config');
-
-interface PageConfig {
-  entry: string;
-  template?: string;
-  title?: string;
-}
-
-interface PagesConfig {
-  [pageName: string]: PageConfig;
-}
-
-const pages: PagesConfig = {
-  main: {
-    entry: 'src/index.ts',
-    template: 'index.html',
-    title: `${process.env.VITE_APP_TITLE || 'Vite-Electron-Starter'} - Version: ${process.env.npm_package_version}`,
-  },
-  popup: {
-    entry: 'src/popup.ts',
-    title: 'My PopUp Title',
-  },
-};
-
-/**
- * IntelliJ is unable to detect, that a Plugin can have this both methods...
- */
-interface CustomPlugin extends Plugin {
-  buildStart?: () => Promise<void>;
-  buildEnd?: () => void;
-}
+const log = useLog('vite.config', LogLevel.INFO);
 
 export default defineConfig(({command, mode}): UserConfig => {
-  log.debug(`define config for command '${Ansi.cyan(command)}' and mode '${Ansi.cyan(mode)}'`);
-  process.env.NODE_ENV = mode;
+  if (!process.env.NODE_ENV) {
+    process.env.NODE_ENV = mode;
+  }
+  const minify = mode === 'production' && false; // will be changed later, when minification is really wanted
 
-  log.info(`Starting Electron in ${Ansi.cyan(process.env.NODE_ENV)} mode`);
+  log.info(`${Ansi.magenta(command === 'serve' ? 'Serving' : 'Building')} App Frontend`);
+
+  let rollupInput;
+  if (command === 'build') {
+    rollupInput = Object.fromEntries(
+      Object.entries(cfg.app.pages).map(([name]) => [
+        `${name}`,
+        `virtual:page:${name}.html`,
+      ]),
+    );
+    log.debug('Rollup Input', rollupInput);
+  }
+
   return {
-    plugins: [
-      vitePluginAppDevServer(),
-      vitePluginElectronPreloadBuild(),
-      vitePluginElectronHotReload(),
-    ],
-    root: 'modules/electron',
+    root: cfg.app.root,
     build: {
       emptyOutDir: true,
-      minify: false,
-      outDir: '../../dist-electron',
-      sourcemap: 'inline',
+      minify,
+      outDir: cfg.output.app,
       reportCompressedSize: false,
       rollupOptions: {
-        external: id => id === 'electron' || id.includes('node:') || builtinModules.includes(id) ||
-          (!id.startsWith('@common/') && /^[^./]/.test(id)),
-        input: {
-          main: resolve(__dirname, 'modules/electron/src/main.ts'),
-        },
-        preserveEntrySignatures: 'strict',
-        output: {
-          format: 'esm',
-          entryFileNames: '[name].js',
-          preserveModules: true,
-          preserveModulesRoot: 'electron',
-          exports: 'named',
+        input: rollupInput,
+      },
+      sourcemap: 'inline', // will decide later if we deploy without source maps
+    },
+    plugins: [
+      vitePluginMultiPage(),
+      {
+        name: 'vite-plugin-dev-server-url',
+        configureServer(server) {
+          server.httpServer?.once('listening', () => {
+            function checkServerURL() {
+              const serverURL = server.resolvedUrls?.local[0];
+              if (serverURL !== undefined) {
+                log.info('Serving App with Vite Dev Server on:', serverURL);
+                process.env.VITE_DEV_SERVER_URL = serverURL;
+                return;
+              }
+              log.debug('waiting for server url...');
+              setTimeout(checkServerURL, 1);
+            }
+            checkServerURL();
+          });
         },
       },
-    },
+      vitePluginElectron(command),
+    ],
     resolve: {
       alias: {
-        '@common': resolve(__dirname, 'modules/common/src'),
+        '@app': path.resolve(__dirname, cfg.app.root, 'src'),
+        '@common': path.resolve(__dirname, cfg.common.root, 'src'),
+      },
+    },
+    server: {
+      watch: {
+        ignored: ['**/project.config.ts', '**/vite.config.ts', '**/vite-env.d.ts'],
       },
     },
   };
 });
 
-function vitePluginAppDevServer(): CustomPlugin {
+function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
   return {
-    name: 'vite-plugin-app-dev-server',
-    async buildStart() {
-      log.info('Serving App Frontend');
-      const server = await createServer({
+    name: 'vite-plugin-electron',
+    configResolved() {
+      if (command === 'serve') {
+        log.info(`Starting Electron in ${Ansi.cyan(process.env.NODE_ENV ?? '')} mode`);
+      } else {
+        log.info(`Building Electron for ${Ansi.cyan(process.env.NODE_ENV ?? '')}`);
+      }
+      build({
+        root: cfg.electron.root,
         plugins: [
-          {
-            name: 'vite-plugin-multi-page',
-            transformIndexHtml(html, ctx) {
-              log.debug('original URL:', ctx.originalUrl);
-              const pageName = ctx.originalUrl?.split('/').filter(Boolean)[0] || 'main';
-              log.debug('pageName:', pageName);
-              const pageConfig = pages[pageName];
-              log.debug('pageConfig:', pageConfig);
-              let htmlTemplate = html;
-              if (!pageConfig) {
-                log.error('no page config found for', pageName);
-                return htmlTemplate;
-              }
-              if (pageConfig.template) {
-                const templatePath = path.resolve('modules/app', pageConfig.template);
-                try {
-                  htmlTemplate = fs.readFileSync(templatePath, 'utf-8');
-                  log.debug('HTML template loaded from', templatePath);
-                } catch (e) {
-                  log.error(`Failed to load template for page: ${Ansi.cyan(pageName)}`, e);
-                }
-              }
-              return htmlTemplate
-                .replace('<%= PAGE_TITLE %>', pageConfig.title || '')
-                .replace('</body>', `  <script type="module" src="./${pageConfig.entry}"></script>\n</body>`);
-            },
-          },
+          vitePluginElectronPreload(command),
+          vitePluginElectronHotReload(command),
         ],
-        configFile: false,
-        root: 'modules/app',
         build: {
           emptyOutDir: true,
           minify: false,
-          outDir: '../../dist',
+          outDir: cfg.output.electron,
+          sourcemap: 'inline',
           reportCompressedSize: false,
           rollupOptions: {
+            external: id => id === 'electron' || id.includes('node:') || builtinModules.includes(id) ||
+              (!id.startsWith('@common/') && /^[^./]/.test(id)),
             input: {
-              main: path.resolve(__dirname, 'modules/app/src/index.ts'),
-              popup: path.resolve(__dirname, 'modules/app/src/popup.ts'),
+              main: path.resolve(__dirname, cfg.electron.root, 'src/main.ts'),
+            },
+            preserveEntrySignatures: 'strict',
+            output: {
+              format: 'esm',
+              entryFileNames: '[name].js',
+              preserveModules: true,
+              preserveModulesRoot: 'electron',
+              exports: 'named',
             },
           },
-          sourcemap: 'inline',
+          ...(command === 'serve' && {
+            watch: {
+              include: [cfg.common.root, cfg.electron.root],
+            },
+          }),
         },
         resolve: {
           alias: {
-            '@app': resolve(__dirname, 'modules/app/src'),
-            '@common': resolve(__dirname, 'modules/common/src'),
+            '@common': path.resolve(__dirname, cfg.common.root, 'src'),
           },
         },
-      });
-      await server.listen();
-      log.info('Serving App with Vite Dev Server on:', server.resolvedUrls?.local[0]);
-      process.env.VITE_DEV_SERVER_URL = server.resolvedUrls?.local[0];
+      }).catch(reason => log.error('Electron Backend build failed:', reason));
     },
   };
 }
 
-function vitePluginElectronHotReload(): CustomPlugin {
+function vitePluginElectronHotReload(command: 'serve' | 'build'): CustomPlugin {
   let electronApp: ChildProcess | null = null;
   let preloadPlugin: PluginOption | null | undefined = null;
   let electronBuildReady = false;
   let preloadBuildReady = false;
+
+  function cleanExit(code: number | null) {
+    log.info('Electron has been stopped');
+    setTimeout(() => {
+      log.info('stopping Vite process too');
+      process.exit(code);
+    }, 500);
+  }
 
   function starteElectron() {
     if (!electronBuildReady || !preloadBuildReady) {
       return;
     }
     if (electronApp !== null) {
-      electronApp.removeListener('exit', process.exit);
+      electronApp.removeListener('exit', cleanExit);
       electronApp.kill('SIGINT');
       electronApp = null;
     }
     electronApp = spawn(String(electronPath), ['--inspect', '.'], {
       stdio: 'inherit',
     });
-    electronApp.addListener('exit', process.exit);
+    electronApp.addListener('exit', cleanExit);
+  }
+
+  function setupExitHandlers() {
+    process.on('SIGINT', () => {
+      if (electronApp) {
+        log.info('Stopping Electron process before exiting Vite serve...');
+        electronApp.kill('SIGINT');
+      }
+      process.exit();
+    });
+
+    process.on('SIGTERM', () => {
+      if (electronApp) {
+        log.info('Stopping Electron process before exiting Vite serve...');
+        electronApp.kill('SIGTERM');
+      }
+      process.exit();
+    });
   }
 
   return {
@@ -189,54 +200,56 @@ function vitePluginElectronHotReload(): CustomPlugin {
       log.debug('configure vite-plugin-electron-hot-reload:', env);
 
       preloadPlugin = config.plugins?.find(p =>
-        p != null && typeof p === 'object' && 'name' in p && p?.name === 'vite-plugin-electron-preload-build');
+        p != null && typeof p === 'object' && 'name' in p && p?.name === 'vite-plugin-electron-preload');
       if (!preloadPlugin) {
-        throw new Error('vite-plugin-electron-preload-build not found');
+        throw new Error('vite-plugin-electron-preload not found');
       }
 
       if (preloadPlugin && 'api' in preloadPlugin) {
         preloadPlugin.api.onBuildEnd(() => {
           preloadBuildReady = true;
-          starteElectron();
+          if (command === 'serve') {
+            starteElectron();
+          }
         });
       }
-
-      return {
-        build: {
-          watch: {},
-        },
-      };
+      if (command === 'serve') {
+        setupExitHandlers();
+      }
     },
     buildEnd() {
       electronBuildReady = true;
-      starteElectron();
+      if (command === 'serve') {
+        starteElectron();
+      }
     },
   };
 }
 
-function vitePluginElectronPreloadBuild(): CustomPlugin {
+function vitePluginElectronPreload(command: 'serve' | 'build'): CustomPlugin {
   const eventEmitter = new EventEmitter();
   let hasBeenBuild = false;
 
+  const entryPoint = path.resolve(__dirname, cfg.preload.root, 'src', 'preload.ts');
+
   return {
-    name: 'vite-plugin-electron-preload-build',
-    async buildStart() {
+    name: 'vite-plugin-electron-preload',
+    async closeBundle() {
       log.debug('Compiling Preload Script...');
       const watcher = await build({
         configFile: false,
-        mode: 'development',
-        root: 'modules/electron-preload',
+        root: cfg.preload.root,
         build: {
           emptyOutDir: false,
           lib: {
-            entry: resolve(__dirname, 'modules/electron-preload/src/preload.ts'),
+            entry: entryPoint,
             formats: ['cjs'],
           },
           minify: false,
-          outDir: '../../dist-electron',
+          outDir: cfg.output.electron,
           reportCompressedSize: false,
           rollupOptions: {
-            input: resolve(__dirname, 'modules/electron-preload/src/preload.ts'),
+            input: entryPoint,
             external: id => id === 'electron' || id.includes('node:') || builtinModules.includes(id),
             output: {
               entryFileNames: '[name].js',
@@ -244,22 +257,28 @@ function vitePluginElectronPreloadBuild(): CustomPlugin {
             },
           },
           sourcemap: 'inline',
-          watch: {},
+          ...(command === 'serve' && {
+            watch: {
+              include: [cfg.common.root, cfg.preload.root],
+            },
+          }),
         },
         resolve: {
           alias: {
-            '@common': resolve(__dirname, 'modules/common/src'),
+            '@common': path.resolve(__dirname, cfg.common.root, 'src'),
           },
         },
       });
-      if ('on' in watcher) {
-        watcher.on('event', (event: any) => {
-          if (event.code === 'BUNDLE_END') {
-            hasBeenBuild = true;
-            log.debug('Preload Script compiled and watching for changes');
-            eventEmitter.emit('build_end');
-          }
-        });
+      if (command === 'serve') {
+        if ('on' in watcher) {
+          watcher.on('event', (event: any) => {
+            if (event.code === 'BUNDLE_END') {
+              hasBeenBuild = true;
+              log.debug('Preload Script compiled and watching for changes');
+              eventEmitter.emit('build_end');
+            }
+          });
+        }
       }
     },
     api: {
@@ -269,6 +288,87 @@ function vitePluginElectronPreloadBuild(): CustomPlugin {
           callback();
         }
       },
+    },
+  };
+}
+
+function vitePluginMultiPage(): Plugin {
+  const contextMap = new Map<string, PageConfig>();
+
+  function loadTemplate(pageConfig: PageConfig | undefined | null): string | null {
+    const templatePath = pageConfig?.template ?
+        path.resolve(__dirname, cfg.app.root, 'templates', pageConfig.template) :
+        path.resolve(__dirname, cfg.app.root, 'index.html');
+    try {
+      const fileContent = fs.readFileSync(templatePath, 'utf-8');
+      log.debug('HTML template loaded from', templatePath, '->', fileContent);
+      if (!pageConfig?.modules || pageConfig.modules.length === 0) {
+        log.warn('No modules found for pageConfig:', pageConfig);
+        return fileContent;
+      }
+      const modules = pageConfig.modules
+        .map(module => `  <script type="module" src="${module.startsWith('./') ? module : `./${module}`}"></script>`)
+        .join('\n');
+      const injected = fileContent.replace('</body>', `${modules}\n</body>`);
+      log.debug('HTML template with injected modules:', injected);
+      return injected;
+    } catch (e) {
+      log.error('Failed to load template for page:', templatePath, e);
+      return null;
+    }
+  }
+
+  return {
+    name: 'vite-plugin-multi-page',
+
+    load(id) {
+      const pageConfig = contextMap.has(id) ? contextMap.get(id) : null;
+      if (pageConfig) {
+        log.debug(`vite-plugin-multi-page.load(${Ansi.cyan(id)})`);
+        return loadTemplate(contextMap.get(id) ?? null);
+      }
+    },
+
+    resolveId(id) {
+      const match = id.match(/^virtual:page:(.+)\.html$/);
+      if (match) {
+        const currentPage = match[1];
+        const pageConfig = cfg.app.pages[currentPage];
+        if (!pageConfig) {
+          throw new Error(`No page config available for ${Ansi.cyan(currentPage)}, please check your configuration.`);
+        }
+        const resolvedId = path.resolve(__dirname, cfg.app.root, `${currentPage}.html`);
+        log.debug(`resolve ID:`, id, 'to: ', resolvedId);
+        contextMap.set(resolvedId, pageConfig);
+        return resolvedId;
+      }
+      return id;
+    },
+
+    transformIndexHtml(html, ctx) {
+      if (ctx.filename) {
+        const pageConfig = contextMap.has(ctx.filename) ? contextMap.get(ctx.filename) : null;
+        if (pageConfig) {
+          return html.replace('<%= PAGE_TITLE %>', pageConfig.title || '');
+        }
+      }
+      if (!ctx.originalUrl) {
+        log.warn('Should not reach this point');
+        return html;
+      }
+      const pageName = ctx.originalUrl?.split('/').filter(Boolean)[0] ?? 'main';
+      log.debug('pageName:', pageName);
+      const pageConfig = cfg.app.pages[pageName];
+      log.debug('pageConfig:', pageConfig);
+      if (!pageConfig) {
+        log.error('no page config found for', pageName);
+        return html;
+      }
+      const template = loadTemplate(pageConfig);
+      if (!template) {
+        return html.replace('<%= PAGE_TITLE %>', pageConfig.title || '');
+      }
+      return template.replace('<%= PAGE_TITLE %>', pageConfig.title || '');
     },
   };
 }
