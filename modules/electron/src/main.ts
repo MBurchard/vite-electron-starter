@@ -1,3 +1,4 @@
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import {fileURLToPath} from 'node:url';
@@ -25,7 +26,7 @@ const log = useLog('electron.main', LogLevel.DEBUG);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-async function createMainWindow() {
+async function createMainWindow(page: string = 'main') {
   const preloadJS = path.join(__dirname, 'preload.js');
   log.debug('loading preload script:', preloadJS);
   const win = new BrowserWindow({
@@ -41,27 +42,17 @@ async function createMainWindow() {
   });
   win.webContents.openDevTools();
   if (process.env.NODE_ENV === 'development' && process.env.VITE_DEV_SERVER_URL) {
-    await win.loadURL(`${process.env.VITE_DEV_SERVER_URL}main`);
-  }
-}
-
-async function createPopupWindow() {
-  const preloadJS = path.join(__dirname, 'preload.js');
-  log.debug('loading preload script:', preloadJS);
-  const win = new BrowserWindow({
-    height: 400,
-    width: 600,
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-      preload: preloadJS,
-      sandbox: true,
-      webviewTag: false,
-    },
-  });
-  win.webContents.openDevTools();
-  if (process.env.NODE_ENV === 'development' && process.env.VITE_DEV_SERVER_URL) {
-    await win.loadURL(`${process.env.VITE_DEV_SERVER_URL}popup`);
+    await win.loadURL(`${process.env.VITE_DEV_SERVER_URL}${page}`);
+  } else {
+    try {
+      log.info('App Path:', app.getAppPath());
+      const filePath = path.resolve(app.getAppPath(), 'dist', `${page}.html`);
+      await fs.access(filePath);
+      log.debug('loading content page', filePath);
+      await win.loadFile(filePath);
+    } catch (e) {
+      log.error('Error loading content page:', page, e);
+    }
   }
 }
 
@@ -75,7 +66,4 @@ log.debug(`Result 2: ${doSth('Hugo')}`);
 app.whenReady().then(async () => {
   log.debug('Electron app is ready');
   await createMainWindow();
-  setTimeout(async () => {
-    await createPopupWindow();
-  }, 5000);
 }).catch(reason => log.error('error during electron app ready:', reason));
