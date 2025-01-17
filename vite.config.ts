@@ -18,6 +18,7 @@ configureLogging({
     CONSOLE: {
       Class: ConsoleAppender,
       colored: true,
+      pretty: true,
     },
   },
   root: {
