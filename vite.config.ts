@@ -49,6 +49,7 @@ export default defineConfig(({command, mode}): UserConfig => {
 
   return {
     root: cfg.app.root,
+    base: './',
     build: {
       emptyOutDir: true,
       minify,
