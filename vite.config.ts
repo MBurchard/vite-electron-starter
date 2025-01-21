@@ -356,7 +356,8 @@ function vitePluginMultiPage(): Plugin {
 
     transformIndexHtml(html, ctx) {
       if (ctx.filename) {
-        const pageConfig = contextMap.has(ctx.filename) ? contextMap.get(ctx.filename) : null;
+        const filename = path.join(ctx.filename);
+        const pageConfig = contextMap.has(filename) ? contextMap.get(filename) : null;
         if (pageConfig) {
           return html.replace('<%= PAGE_TITLE %>', pageConfig.title || '');
         }
