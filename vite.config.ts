@@ -309,12 +309,17 @@ function vitePluginMultiPage(): Plugin {
         log.warn('No modules found for pageConfig:', pageConfig);
         return fileContent;
       }
+      let result = fileContent;
+      if (process.env.NODE_ENV === 'development') {
+        // noinspection HtmlUnknownTarget
+        result = result.replace('head>', 'head>\n<script type="module" src="/@vite/client"></script>');
+      }
       const modules = pageConfig.modules
         .map(module => `  <script type="module" src="${module.startsWith('./') ? module : `./${module}`}"></script>`)
         .join('\n');
-      const injected = fileContent.replace('</body>', `${modules}\n</body>`);
-      log.debug('HTML template with injected modules:', injected);
-      return injected;
+      result = result.replace('</body>', `${modules}\n</body>`);
+      log.debug('HTML template with injected modules:', result);
+      return result;
     } catch (e) {
       log.error('Failed to load template for page:', templatePath, e);
       return null;
