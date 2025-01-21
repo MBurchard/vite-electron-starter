@@ -121,7 +121,8 @@ function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
           reportCompressedSize: false,
           rollupOptions: {
             external: id => id === 'electron' || id.includes('node:') || builtinModules.includes(id) ||
-              (!id.startsWith('@common/') && /^[^./]/.test(id)),
+              (!id.startsWith('@common/') && !path.join(id).includes(path.join(cfg.electron.root, 'src')) &&
+                /^[^./]/.test(id)),
             input: {
               main: path.resolve(__dirname, cfg.electron.root, 'src/main.ts'),
             },
@@ -355,7 +356,8 @@ function vitePluginMultiPage(): Plugin {
 
     transformIndexHtml(html, ctx) {
       if (ctx.filename) {
-        const pageConfig = contextMap.has(ctx.filename) ? contextMap.get(ctx.filename) : null;
+        const filename = path.join(ctx.filename);
+        const pageConfig = contextMap.has(filename) ? contextMap.get(filename) : null;
         if (pageConfig) {
           return html.replace('<%= PAGE_TITLE %>', pageConfig.title || '');
         }
