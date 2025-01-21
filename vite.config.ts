@@ -121,7 +121,8 @@ function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
           reportCompressedSize: false,
           rollupOptions: {
             external: id => id === 'electron' || id.includes('node:') || builtinModules.includes(id) ||
-              (!id.startsWith('@common/') && /^[^./]/.test(id)),
+              (!id.startsWith('@common/') && !path.join(id).includes(path.join(cfg.electron.root, 'src')) &&
+                /^[^./]/.test(id)),
             input: {
               main: path.resolve(__dirname, cfg.electron.root, 'src/main.ts'),
             },
