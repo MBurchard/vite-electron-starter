@@ -1,4 +1,4 @@
-import type {CustomPlugin, PageConfig} from './vite-env.d.ts';
+import type {CustomPlugin, PageConfig} from './types/env.js';
 import {type ChildProcess, spawn} from 'node:child_process';
 import {EventEmitter} from 'node:events';
 import fs from 'node:fs';

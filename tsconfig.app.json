@@ -29,10 +29,10 @@
     "isolatedModules": true
   },
   "include": [
-    "env.d.ts",
+    "types/env.d.ts",
     "modules/app/**/*.ts",
     "modules/common/**/*.ts",
-    "modules/electron-preload/**/*.ts"
+    "modules/electron-preload/**/*.ts",
   ],
   "exclude": [
     "**/*.spec.ts",
