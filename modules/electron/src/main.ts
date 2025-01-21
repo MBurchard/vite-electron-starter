@@ -10,7 +10,7 @@ app.whenReady().then(async () => {
   setupApplicationLogging().catch(reason => log.error('Error during setup application logging:', reason));
   log.debug('Electron app is ready');
   registerFrontendListener('test-channel', () => {
-    log.debug('frontend emitted on test-channel x');
+    log.debug('frontend emitted on test-channel');
   });
   registerFrontendHandler('getVersions', (): Versions => {
     return {
