@@ -22,8 +22,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "typecheck:app": "tsc --project tsconfig.app.json --noEmit",
-    "typecheck:electron": "tsc --project tsconfig.node.json --noEmit",
+    "typecheck:app": "tsc --project tsconfig.app.json",
+    "typecheck:electron": "tsc --project tsconfig.node.json",
     "typecheck": "run-p typecheck:app typecheck:electron",
     "build-only": "vite build",
     "build": "run-s typecheck build-only",
@@ -48,7 +48,7 @@
     "glob": "^11.0.1",
     "npm-run-all2": "^7.0.2",
     "typescript": "~5.7.3",
-    "vite": "^6.0.8",
+    "vite": "^6.0.11",
     "vitest": "^3.0.2"
   },
   "overrides": {
