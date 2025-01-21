@@ -5,5 +5,5 @@ export default /** @type import('electron-builder').Configuration */
     output: 'releases',
     buildResources: 'buildResources',
   },
-  productName: 'Vite Electron Starter',
+  productName: 'Vite-Electron-Starter',
 });
