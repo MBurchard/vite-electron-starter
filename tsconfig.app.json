@@ -10,6 +10,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "paths": {
+      "@assets/*": ["./modules/app/assets/*"],
       "@app/*": ["./modules/app/src/*"],
       "@common/*": ["./modules/common/src/*"]
     },
@@ -29,7 +30,7 @@
     "isolatedModules": true
   },
   "include": [
-    "env.d.ts",
+    "types/env.d.ts",
     "modules/app/**/*.ts",
     "modules/common/**/*.ts",
     "modules/electron-preload/**/*.ts"

@@ -5,6 +5,7 @@ coverage
 dist
 dist-electron
 docs
+releases
 
 # local env files
 .env.local

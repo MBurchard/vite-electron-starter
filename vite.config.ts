@@ -1,4 +1,4 @@
-import type {CustomPlugin, PageConfig} from './vite-env.d.ts';
+import type {CustomPlugin, PageConfig} from './types/env.js';
 import {type ChildProcess, spawn} from 'node:child_process';
 import {EventEmitter} from 'node:events';
 import fs from 'node:fs';
@@ -18,6 +18,7 @@ configureLogging({
     CONSOLE: {
       Class: ConsoleAppender,
       colored: true,
+      pretty: true,
     },
   },
   root: {
@@ -49,6 +50,7 @@ export default defineConfig(({command, mode}): UserConfig => {
 
   return {
     root: cfg.app.root,
+    base: './',
     build: {
       emptyOutDir: true,
       minify,
@@ -83,6 +85,7 @@ export default defineConfig(({command, mode}): UserConfig => {
     ],
     resolve: {
       alias: {
+        '@assets': path.resolve(__dirname, cfg.app.root, 'assets'),
         '@app': path.resolve(__dirname, cfg.app.root, 'src'),
         '@common': path.resolve(__dirname, cfg.common.root, 'src'),
       },
@@ -133,7 +136,7 @@ function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
           },
           ...(command === 'serve' && {
             watch: {
-              include: [cfg.common.root, cfg.electron.root],
+              include: [`${cfg.common.root}/**/*.ts`, `${cfg.electron.root}/**/*.ts`],
             },
           }),
         },
@@ -259,7 +262,7 @@ function vitePluginElectronPreload(command: 'serve' | 'build'): CustomPlugin {
           sourcemap: 'inline',
           ...(command === 'serve' && {
             watch: {
-              include: [cfg.common.root, cfg.preload.root],
+              include: [`${cfg.common.root}/**/*.ts`, `${cfg.preload.root}/**/*.ts`],
             },
           }),
         },
@@ -306,12 +309,17 @@ function vitePluginMultiPage(): Plugin {
         log.warn('No modules found for pageConfig:', pageConfig);
         return fileContent;
       }
+      let result = fileContent;
+      if (process.env.NODE_ENV === 'development') {
+        // noinspection HtmlUnknownTarget
+        result = result.replace('head>', 'head>\n<script type="module" src="/@vite/client"></script>');
+      }
       const modules = pageConfig.modules
         .map(module => `  <script type="module" src="${module.startsWith('./') ? module : `./${module}`}"></script>`)
         .join('\n');
-      const injected = fileContent.replace('</body>', `${modules}\n</body>`);
-      log.debug('HTML template with injected modules:', injected);
-      return injected;
+      result = result.replace('</body>', `${modules}\n</body>`);
+      log.debug('HTML template with injected modules:', result);
+      return result;
     } catch (e) {
       log.error('Failed to load template for page:', templatePath, e);
       return null;

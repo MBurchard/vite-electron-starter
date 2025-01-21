@@ -1,4 +1,4 @@
-import type {ViteElectronConfig} from './vite-env.js';
+import type {ViteElectronConfig} from './types/env.js';
 import process from 'node:process';
 
 export const viteElectronConfig: ViteElectronConfig = {
