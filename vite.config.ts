@@ -135,7 +135,7 @@ function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
           },
           ...(command === 'serve' && {
             watch: {
-              include: [cfg.common.root, cfg.electron.root],
+              include: [`${cfg.common.root}/**/*.ts`, `${cfg.electron.root}/**/*.ts`],
             },
           }),
         },
@@ -261,7 +261,7 @@ function vitePluginElectronPreload(command: 'serve' | 'build'): CustomPlugin {
           sourcemap: 'inline',
           ...(command === 'serve' && {
             watch: {
-              include: [cfg.common.root, cfg.preload.root],
+              include: [`${cfg.common.root}/**/*.ts`, `${cfg.preload.root}/**/*.ts`],
             },
           }),
         },
