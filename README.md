@@ -17,3 +17,7 @@ Since logging is essential for many developers, this project offers a ready-to-u
 ![Console logging](documentation/img/console_logging.png)
 
 ![File logging](documentation/img/file_logging.png)
+
+It also has source map support, so it shows the correct error position from the original TypeScript code:
+
+![File logging](documentation/img/sourcemap_support.png)

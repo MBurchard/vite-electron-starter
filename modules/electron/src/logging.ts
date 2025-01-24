@@ -3,6 +3,7 @@ import {ConsoleAppender} from '@mburchard/bit-log/dist/appender/ConsoleAppender.
 import {FileAppender} from '@mburchard/bit-log/dist/appender/FileAppender.js';
 import {LogLevel} from '@mburchard/bit-log/dist/definitions.js';
 import {fileExists, mkDir} from './file-utils';
+import 'source-map-support/register.js';
 
 // temporarily change the log level of the ROOT logger to DEBUG
 const rootLog = useLog('');
