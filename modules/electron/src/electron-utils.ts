@@ -73,6 +73,10 @@ export async function createWindow(conf: WindowConfiguration) {
   }
 }
 
+export function getLogPath(): string {
+  return path.resolve(app.getPath('userData'), 'logs');
+}
+
 /**
  * Register a handler that will be invoked, when the frontend is sending something on a specific channel.
  * The handler is able to return a result to the frontend.
