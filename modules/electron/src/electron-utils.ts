@@ -21,6 +21,8 @@ interface WindowConfiguration {
   withDevTools?: boolean;
 }
 
+const ENV = process.env.NODE_ENV ?? 'production';
+
 export async function createWindow(conf: WindowConfiguration) {
   try {
     const windowOptions = conf.windowOptions || {};
@@ -45,13 +47,15 @@ export async function createWindow(conf: WindowConfiguration) {
       },
     });
 
-    if (process.env.NODE_ENV === 'development' && conf.withDevTools) {
+    log.debug('Environment:', ENV);
+    log.debug('VITE_DEV_SERVER_URL:', process.env.VITE_DEV_SERVER_URL);
+
+    if (ENV === 'development' && conf.withDevTools) {
+      log.debug('Using devtools:');
       win.webContents.openDevTools();
     }
 
-    log.debug('NODE_ENV:', process.env.NODE_ENV);
-    log.debug('VITE_DEV_SERVER_URL:', process.env.VITE_DEV_SERVER_URL);
-    if (process.env.NODE_ENV === 'development' && process.env.VITE_DEV_SERVER_URL) {
+    if (ENV === 'development' && process.env.VITE_DEV_SERVER_URL) {
       await win.loadURL(`${process.env.VITE_DEV_SERVER_URL}${conf.contentPage}`);
     } else {
       try {
