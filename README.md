@@ -3,6 +3,8 @@
 ![lang: Typescript](https://img.shields.io/badge/crafted_with-Typescript-blue?logo=typescript)
 ![GitHub License](https://img.shields.io/github/license/mburchard/bit-log)
 
+<img src="documentation/img/app.png" alt="the app running" style="margin: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.15);"/>
+
 ## Introduction
 This starter template provides a quick and easy way to build [Electron](https://www.electronjs.org/) apps with [TypeScript](https://www.typescriptlang.org/).
 It supports Hot Module Replacement (HMR) for the Electron main process, the preload script, and the app itself.
