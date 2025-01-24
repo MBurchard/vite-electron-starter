@@ -1,4 +1,5 @@
 import type {Versions} from '@common/definitions.js';
+import path from 'node:path';
 import process from 'node:process';
 import {app} from 'electron';
 import {createWindow, registerFrontendHandler, registerFrontendListener} from './electron-utils.js';
@@ -7,7 +8,8 @@ import {getLogger, setupApplicationLogging} from './logging.js';
 const log = getLogger('electron.main');
 
 app.whenReady().then(async () => {
-  setupApplicationLogging().catch(reason => log.error('Error during setup application logging:', reason));
+  const logPath = path.resolve(app.getPath('userData'), 'logs');
+  await setupApplicationLogging(logPath);
   log.debug('Electron app is ready');
   registerFrontendListener('test-channel', () => {
     log.debug('frontend emitted on test-channel');
