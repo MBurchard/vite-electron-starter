@@ -41,7 +41,7 @@
     "@antfu/eslint-config": "^3.16.0",
     "@tsconfig/node22": "^22.0.0",
     "@types/jsdom": "^21.1.7",
-    "@types/node": "^22.10.9",
+    "@types/node": "^22.10.10",
     "electron": "^34.0.1",
     "electron-builder": "26.0.0-alpha.9",
     "eslint": "^9.18.0",
@@ -49,7 +49,7 @@
     "npm-run-all2": "^7.0.2",
     "typescript": "~5.7.3",
     "vite": "^6.0.11",
-    "vitest": "^3.0.3"
+    "vitest": "^3.0.4"
   },
   "overrides": {
     "dmg-builder": "26.0.0-alpha.9",
