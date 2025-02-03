@@ -1,3 +1,4 @@
+import {BackendForwardingAppender} from '@app/BackendForwardingAppender.js';
 import {configureLogging, useLog} from '@mburchard/bit-log';
 import {ConsoleAppender} from '@mburchard/bit-log/dist/appender/ConsoleAppender.js';
 
@@ -6,9 +7,12 @@ configureLogging({
     CONSOLE: {
       Class: ConsoleAppender,
     },
+    BACKEND: {
+      Class: BackendForwardingAppender,
+    },
   },
   root: {
-    appender: ['CONSOLE'],
+    appender: ['CONSOLE', 'BACKEND'],
     level: 'DEBUG',
   },
 });
