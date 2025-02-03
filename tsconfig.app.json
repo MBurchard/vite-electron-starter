@@ -12,7 +12,8 @@
     "paths": {
       "@assets/*": ["./modules/app/assets/*"],
       "@app/*": ["./modules/app/src/*"],
-      "@common/*": ["./modules/common/src/*"]
+      "@common/*": ["./modules/common/src/*"],
+      "@css/*": ["./modules/app/css/*"]
     },
     "resolveJsonModule": true,
 

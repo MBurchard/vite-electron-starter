@@ -88,6 +88,7 @@ export default defineConfig(({command, mode}): UserConfig => {
         '@assets': path.resolve(__dirname, cfg.app.root, 'assets'),
         '@app': path.resolve(__dirname, cfg.app.root, 'src'),
         '@common': path.resolve(__dirname, cfg.common.root, 'src'),
+        '@css': path.resolve(__dirname, cfg.app.root, 'css'),
       },
     },
     server: {
