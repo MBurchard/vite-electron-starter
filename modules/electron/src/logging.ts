@@ -24,7 +24,7 @@ export const getLogger = useLog;
 
 export async function setupApplicationLogging(logPath: string): Promise<void> {
   try {
-    log.debug('set up Application Logging from configuration');
+    log.debug(`set up Application Logging in path: ${logPath}`);
     if (!await fileExists(logPath)) {
       log.debug(`the filepath for logging '${logPath}' does not exists, creating...`);
       const result = await mkDir(logPath);
