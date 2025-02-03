@@ -1,15 +1,9 @@
+import type {BrowserWindowConstructorOptions, IpcMainEvent, IpcMainInvokeEvent} from 'electron';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import {fileURLToPath} from 'node:url';
-import {
-  app,
-  BrowserWindow,
-  type BrowserWindowConstructorOptions,
-  ipcMain,
-  type IpcMainEvent,
-  type IpcMainInvokeEvent,
-} from 'electron';
+import {app, BrowserWindow, ipcMain} from 'electron';
 import {v4 as uuidv4} from 'uuid';
 import {getLogger} from './logging.js';
 
