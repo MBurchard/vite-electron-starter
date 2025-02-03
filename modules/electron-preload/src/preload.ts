@@ -1,8 +1,9 @@
 import type {Versions} from '@common/definitions.js';
-import {getLog} from '@common/logging.js';
+import type {ILogEvent} from '@mburchard/bit-log/dist/definitions.js';
+import {useLog} from '@mburchard/bit-log';
 import {contextBridge, ipcRenderer} from 'electron';
 
-const log = getLog('electron.preload');
+const log = useLog('electron.preload');
 
 /**
  * Request some data/information from the Electron main process.
@@ -27,12 +28,16 @@ function emit(channel: string, ...args: any[]): void {
 
 export interface Backend {
   emit: (channel: string, ...args: any[]) => void;
+  forwardLogEvent: (event: ILogEvent) => void;
   getVersions: () => Promise<Versions>;
   invoke: <T>(channel: string, ...args: any[]) => Promise<T>;
 }
 
 const backend: Backend = {
   emit,
+  forwardLogEvent: (event: ILogEvent) => {
+    emit('frontend-logging', event);
+  },
   getVersions: async () => {
     return invoke('getVersions');
   },
@@ -47,4 +52,4 @@ declare global {
 
 contextBridge.exposeInMainWorld('backend', backend);
 
-log.debug('Preload JS prepared');
+log.debug('Preload JS finished');
