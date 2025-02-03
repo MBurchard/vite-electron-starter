@@ -34,6 +34,7 @@
   "exclude": [
     "**/*.spec.ts",
     "**/*.test.ts",
+    "modules/common/src/renderer/**/*.ts",
     "node_modules",
     "coverage",
     "dist",
