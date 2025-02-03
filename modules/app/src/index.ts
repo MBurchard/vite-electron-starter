@@ -1,9 +1,9 @@
 import type {Versions} from '@common/definitions.js';
+import {getLog} from '@app/logging.js';
 import electronLogo from '@assets/electron.svg';
 import typescriptLogo from '@assets/typescript.svg';
 import viteLogo from '@assets/vite.svg';
-import {getLog} from '@common/logging.js';
-import '@app/css/style.css';
+import '@css/style.css';
 
 const log = getLog('app.main');
 const {backend} = window;

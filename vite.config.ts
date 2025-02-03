@@ -1,5 +1,7 @@
+import type {ChildProcess} from 'node:child_process';
+import type {Plugin, PluginOption, UserConfig} from 'vite';
 import type {CustomPlugin, PageConfig} from './types/env.js';
-import {type ChildProcess, spawn} from 'node:child_process';
+import {spawn} from 'node:child_process';
 import {EventEmitter} from 'node:events';
 import fs from 'node:fs';
 import {builtinModules} from 'node:module';
@@ -10,7 +12,7 @@ import {Ansi} from '@mburchard/bit-log/dist/ansi.js';
 import {ConsoleAppender} from '@mburchard/bit-log/dist/appender/ConsoleAppender.js';
 import {LogLevel} from '@mburchard/bit-log/dist/definitions.js';
 import electronPath from 'electron';
-import {build, defineConfig, type Plugin, type PluginOption, type UserConfig} from 'vite';
+import {build, defineConfig} from 'vite';
 import {viteElectronConfig as cfg} from './project.config.js';
 
 configureLogging({
@@ -88,6 +90,7 @@ export default defineConfig(({command, mode}): UserConfig => {
         '@assets': path.resolve(__dirname, cfg.app.root, 'assets'),
         '@app': path.resolve(__dirname, cfg.app.root, 'src'),
         '@common': path.resolve(__dirname, cfg.common.root, 'src'),
+        '@css': path.resolve(__dirname, cfg.app.root, 'css'),
       },
     },
     server: {
