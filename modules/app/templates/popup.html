@@ -2,14 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title><%= PAGE_TITLE %></title>
 </head>
-<body>
-  <p>
-    <label>Test:</label> <span id="test"></span>
-  </p>
-  <p>This is the popup page</p>
+<body class="<%= PAGE %>">
+  <div class="container">
+    <p>
+      <label>Test:</label> <span id="test"></span>
+    </p>
+    <p>This is the popup page</p>
+  </div>
 </body>
 </html>
