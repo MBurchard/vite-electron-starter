@@ -79,6 +79,7 @@ export default defineConfig(({command, mode}): UserConfig => {
               log.debug('waiting for server url...');
               setTimeout(checkServerURL, 1);
             }
+
             checkServerURL();
           });
         },
@@ -346,6 +347,7 @@ function vitePluginMultiPage(): Plugin {
       if (match) {
         const currentPage = match[1];
         const pageConfig = cfg.app.pages[currentPage];
+        pageConfig.id = currentPage;
         if (!pageConfig) {
           throw new Error(`No page config available for ${Ansi.cyan(currentPage)}, please check your configuration.`);
         }
@@ -362,7 +364,7 @@ function vitePluginMultiPage(): Plugin {
         const filename = path.join(ctx.filename);
         const pageConfig = contextMap.has(filename) ? contextMap.get(filename) : null;
         if (pageConfig) {
-          return html.replace('<%= PAGE_TITLE %>', pageConfig.title || '');
+          return html.replace('<%= PAGE_TITLE %>', pageConfig.title || '').replace('<%= PAGE %>', pageConfig.id ?? '');
         }
       }
       if (!ctx.originalUrl) {
@@ -379,9 +381,9 @@ function vitePluginMultiPage(): Plugin {
       }
       const template = loadTemplate(pageConfig);
       if (!template) {
-        return html.replace('<%= PAGE_TITLE %>', pageConfig.title || '');
+        return html.replace('<%= PAGE_TITLE %>', pageConfig.title ?? '').replace('<%= PAGE %>', pageName);
       }
-      return template.replace('<%= PAGE_TITLE %>', pageConfig.title || '');
+      return template.replace('<%= PAGE_TITLE %>', pageConfig.title ?? '').replace('<%= PAGE %>', pageName);
     },
   };
 }
