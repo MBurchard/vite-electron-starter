@@ -1,5 +1,6 @@
 import type {BrowserWindowConstructorOptions, IpcMainEvent, IpcMainInvokeEvent} from 'electron';
 import fs from 'node:fs/promises';
+import type {IpcChannel} from '@common/definitions.js';
 import path from 'node:path';
 import process from 'node:process';
 import {fileURLToPath} from 'node:url';
@@ -79,11 +80,11 @@ export function getLogPath(): string {
  * Register a handler that will be invoked, when the frontend is sending something on a specific channel.
  * The handler is able to return a result to the frontend.
  *
- * @param {string} channel
+ * @param {IpcChannel} channel
  * @param {(event: Electron.CrossProcessExports.IpcMainInvokeEvent, ...args: any[]) => unknown} handler
  */
 export function registerFrontendHandler(
-  channel: string,
+  channel: IpcChannel,
   handler: (event: IpcMainInvokeEvent, ...args: any[]) => Promise<void> | unknown,
 ): void {
   ipcMain.handle(channel, handler);
@@ -92,11 +93,11 @@ export function registerFrontendHandler(
 /**
  * Register a listener that will be invoked, when the frontend is sending something on a specific channel.
  *
- * @param {string} channel
+ * @param {IpcChannel} channel
  * @param {(event: Electron.CrossProcessExports.IpcMainEvent, ...args: any[]) => void} listener
  */
 export function registerFrontendListener(
-  channel: string,
+  channel: IpcChannel,
   listener: (event: IpcMainEvent, ...args: any[]) => void,
 ): void {
   ipcMain.on(channel, listener);
