@@ -1,5 +1,4 @@
 import type {Versions} from '@common/definitions.js';
-import type {ILogEvent} from '@mburchard/bit-log/dist/definitions.js';
 import process from 'node:process';
 import {app} from 'electron';
 import {createWindow, getLogPath, registerFrontendHandler, registerFrontendListener} from './electron-utils.js';
@@ -8,10 +7,6 @@ import {doFrontendLogging, getLogger, setupApplicationLogging} from './logging.j
 const log = getLogger('electron.main');
 
 app.whenReady().then(async () => {
-  await setupApplicationLogging(getLogPath());
-  registerFrontendListener('frontend-logging', (_, event: ILogEvent) => {
-    doFrontendLogging(event);
-  });
   registerFrontendHandler('getVersions', (): Versions => {
     return {
       chrome: process.versions.chrome,
