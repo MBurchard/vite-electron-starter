@@ -5,6 +5,10 @@ export const viteElectronConfig: ViteElectronConfig = {
   app: {
     root: 'modules/app',
     pages: {
+      displayDemo: {
+        modules: ['src/displayDemo.ts'],
+        title: 'Display Demo',
+      },
       main: {
         modules: ['src/index.ts'],
         title: `${process.env.VITE_APP_TITLE ?? 'Vite-Electron-Starter'} - Version: ${process.env.npm_package_version}`,
