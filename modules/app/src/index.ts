@@ -8,6 +8,11 @@ import '@css/style.css';
 const log = getLog('app.main');
 const {backend} = window;
 
+function showDisplayDemo() {
+  log.debug('show display demo');
+  backend.emit('showDisplayDemo');
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   log.debug('DOMContentLoaded');
 
@@ -17,7 +22,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     log.debug('Versions:', versions);
   } catch {}
 
-  const content = `
+  document.querySelector('#app')!.innerHTML = `
   <div>
     <img src="${viteLogo}" class="logo" alt="Vite logo" />
     <img src="${electronLogo}" class="logo" alt="Electron logo" />
@@ -29,7 +34,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       <div class="tile">Electron: ${versions?.electron}</div>
       <div class="tile">Node: ${versions?.node}</div>
     </div>
+    <p>&nbsp;</p>
+    <p>
+      <button id="displayDemoBtn">Demo Window Manager</button>
+    </p>
   </div>`;
-
-  document.querySelector('#app')!.innerHTML = content;
+  document.querySelector<HTMLButtonElement>('#displayDemoBtn')?.addEventListener('click', showDisplayDemo);
 });
