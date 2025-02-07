@@ -5,8 +5,9 @@ import {ConsoleAppender} from '@mburchard/bit-log/dist/appender/ConsoleAppender.
 import {FileAppender} from '@mburchard/bit-log/dist/appender/FileAppender.js';
 import {LogLevel} from '@mburchard/bit-log/dist/definitions.js';
 import {app} from 'electron';
-import {getLogPath, registerFrontendListener} from './electron-utils.js';
+import {getLogPath} from './electron-utils.js';
 import {fileExists, mkDir} from './file-utils';
+import {registerFrontendListener} from './ipc.js';
 import 'source-map-support/register.js';
 
 // temporarily change the log level of the ROOT logger to DEBUG
@@ -69,9 +70,9 @@ async function setupApplicationLogging(): Promise<void> {
       `${Ansi.magenta('**********')} App (${Ansi.cyan(app.getVersion())}) (re)started ${Ansi.magenta('**********')}`;
     log.info(msg);
     frontendLoggingHelper.info(msg);
-    registerFrontendListener('frontend-logging', (_, event: ILogEvent) => {
-      if (event != null) {
-        frontendLoggingHelper.emit(event);
+    registerFrontendListener('frontendLogging', (_event, _windowId, logEvent: ILogEvent) => {
+      if (logEvent != null) {
+        frontendLoggingHelper.emit(logEvent);
       }
     });
   } catch (e) {
