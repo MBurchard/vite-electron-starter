@@ -13,11 +13,31 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+html:has(> body.popup) {
+  background: transparent !important;
+}
+
 body {
   margin: 0;
-  display: flex;
-  min-width: 320px;
-  min-height: 100vh;
+
+  &.main {
+    display: flex;
+    min-width: 320px;
+    min-height: 100vh;
+  }
+
+  &.popup {
+    overflow: hidden;
+    user-select: none;
+
+    .container {
+      background-color: lightblue;
+      border: 2px solid deepskyblue;
+      border-radius: 6px;
+      color: black;
+      padding: 0 6px 0 6px;
+    }
+  }
 }
 
 h1 {
