@@ -20,6 +20,57 @@ html:has(> body.popup) {
 body {
   margin: 0;
 
+  &.displayDemo {
+    .displays {
+      background-color: #2a2a2a;
+      border: 1px solid #444;
+      margin: 20px auto;
+      position: relative;
+
+      .display {
+        align-items: center;
+        background-color: #ffd700;
+        display: flex;
+        font-size: 14px;
+        justify-content: center;
+        position: absolute;
+
+        &.internal {
+          background-color: #add8e6;
+        }
+
+        .idLabel {
+          background-color: rgba(255, 255, 255, 0.7);
+          border-radius: 3px;
+          color: black;
+          font-size: 12px;
+          font-weight: bold;
+          padding: 2px 4px;
+          position: absolute;
+          right: 6px;
+          top: 6px;
+        }
+
+        .overlay {
+          background-color: rgba(0, 0, 0, 0.2);
+          position: absolute;
+        }
+
+        .primary {
+          background-color: rgba(100, 180, 100, 0.6);
+          border-radius: 3px;
+          color: white;
+          font-size: 12px;
+          font-weight: bold;
+          left: 6px;
+          padding: 2px 6px;
+          position: absolute;
+          top: 6px;
+        }
+      }
+    }
+  }
+
   &.main {
     display: flex;
     min-width: 320px;
@@ -107,5 +158,15 @@ button {
   }
   button {
     background-color: #f9f9f9;
+  }
+
+  body {
+
+    &.displayDemo {
+      .displays {
+        background-color: #f0f0f0;
+        border: 1px solid #ccc;
+      }
+    }
   }
 }
