@@ -133,9 +133,20 @@ function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
             preserveEntrySignatures: 'strict',
             output: {
               format: 'esm',
-              entryFileNames: '[name].js',
+              entryFileNames: (chunk) => {
+                if (!chunk.facadeModuleId) {
+                  log.warn('Skipping chunk with null facadeModuleId:', chunk);
+                  return 'electron/unknown.js';
+                }
+                let relativePath =
+                  path.relative(path.resolve(__dirname, cfg.electron.root, 'src'), chunk.facadeModuleId);
+                if (relativePath.startsWith('../') || chunk.facadeModuleId.includes(cfg.common.root)) {
+                  relativePath = path.relative(path.resolve(__dirname, cfg.common.root, 'src'), chunk.facadeModuleId);
+                  return `electron/common/${relativePath.replace(/\\/g, '/').replace(/\.ts$/, '.js')}`;
+                }
+                return `electron/${relativePath.replace(/\\/g, '/').replace(/\.ts$/, '.js')}`;
+              },
               preserveModules: true,
-              preserveModulesRoot: 'electron',
               exports: 'named',
             },
           },
@@ -254,7 +265,7 @@ function vitePluginElectronPreload(command: 'serve' | 'build'): CustomPlugin {
             formats: ['cjs'],
           },
           minify: false,
-          outDir: cfg.output.electron,
+          outDir: path.join(cfg.output.electron, 'electron'),
           reportCompressedSize: false,
           rollupOptions: {
             input: entryPoint,
