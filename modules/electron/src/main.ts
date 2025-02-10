@@ -1,6 +1,7 @@
 import type {Display, Versions} from '@common/definitions.js';
 import type {BrowserWindow} from 'electron';
 import process from 'node:process';
+import {IpcChannels} from '@common/definitions.js';
 import {app} from 'electron';
 import {registerFrontendHandler, registerFrontendListener, sendFrontend} from './ipc.js';
 import {getLogger} from './logging.js';
@@ -35,15 +36,15 @@ const log = getLogger('electron.main');
 app.whenReady().then(async () => {
   let mainWindow: BrowserWindow | undefined;
 
-  registerFrontendHandler('getDisplayData', (): Display[] => {
+  registerFrontendHandler(IpcChannels.getDisplayData, (): Display[] => {
     return DISPLAY_WATCHER.getDisplays();
   });
 
   DISPLAY_WATCHER.on('update', (displays: Display[]) => {
-    sendFrontend('updateDisplayData', displays);
+    sendFrontend(IpcChannels.updateDisplayData, displays);
   });
 
-  registerFrontendHandler('getVersions', (): Versions => {
+  registerFrontendHandler(IpcChannels.getVersions, (): Versions => {
     return {
       chrome: process.versions.chrome,
       electron: process.versions.electron,
@@ -51,7 +52,7 @@ app.whenReady().then(async () => {
     };
   });
 
-  registerFrontendListener('showDisplayDemo', async () => {
+  registerFrontendListener(IpcChannels.showDisplayDemo, async () => {
     try {
       log.debug('show display demo');
       const displayDemoWindow = await createWindow({
