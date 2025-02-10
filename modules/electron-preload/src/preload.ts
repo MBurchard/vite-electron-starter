@@ -1,5 +1,6 @@
 import type {IpcChannel, Versions} from '@common/definitions.js';
 import type {ILogEvent} from '@mburchard/bit-log/dist/definitions.js';
+import {IpcChannels} from '@common/definitions.js';
 import {useLog} from '@mburchard/bit-log';
 import {contextBridge, ipcRenderer} from 'electron';
 
@@ -79,10 +80,10 @@ export interface Backend {
 const backend: Backend = {
   emit,
   forwardLogEvent: (event: ILogEvent) => {
-    emit('frontendLogging', event);
+    emit(IpcChannels.frontendLogging, event);
   },
   getVersions: async () => {
-    return invoke('getVersions');
+    return invoke(IpcChannels.getVersions);
   },
   invoke,
   on,
@@ -99,7 +100,7 @@ declare global {
 contextBridge.exposeInMainWorld('backend', backend);
 
 window.addEventListener('DOMContentLoaded', () => {
-  emit('windowFullyLoaded');
+  emit(`windowFullyLoaded-${getWindowId()}`);
 });
 
 log.debug('Preload JS finished');

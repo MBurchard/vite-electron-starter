@@ -28,7 +28,7 @@ export async function createWindow(conf: WindowConfiguration): Promise<BrowserWi
 
     const showWindow = !(windowOptions.show === false);
 
-    const _windowId = uuidv4();
+    const windowId = uuidv4();
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
     const preloadJS = path.join(__dirname, 'preload.js');
     log.debug('using preload script:', preloadJS);
@@ -36,7 +36,7 @@ export async function createWindow(conf: WindowConfiguration): Promise<BrowserWi
       ...windowOptions,
       ...{
         webPreferences: {
-          additionalArguments: [`--window-id?${_windowId}`],
+          additionalArguments: [`--window-id?${windowId}`],
           contextIsolation: true,
           nodeIntegration: false,
           preload: preloadJS,
@@ -47,16 +47,15 @@ export async function createWindow(conf: WindowConfiguration): Promise<BrowserWi
     });
 
     const windowFullyLoadedListener: FrontendIpcListener = (_event, windowId) => {
-      if (windowId === _windowId) {
-        const endTS = Date.now();
-        log.debug(`Window '${conf.contentPage}' has been opened in ${endTS - startTS}ms`);
-      }
+      const endTS = Date.now();
+      log.debug(`Window '${conf.contentPage}' has been opened in ${endTS - startTS}ms`);
+      unregisterFrontendListener(`windowFullyLoaded-${windowId}`, windowFullyLoadedListener);
     };
 
-    registerFrontendListener('windowFullyLoaded', windowFullyLoadedListener);
+    registerFrontendListener(`windowFullyLoaded-${windowId}`, windowFullyLoadedListener);
 
     win.on('closed', () => {
-      unregisterFrontendListener('windowFullyLoaded', windowFullyLoadedListener);
+      unregisterFrontendListener(`windowFullyLoaded-${windowId}`, windowFullyLoadedListener);
     });
 
     log.debug('Environment:', ENV);
