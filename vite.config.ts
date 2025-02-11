@@ -140,6 +140,7 @@ function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
                 }
                 let relativePath =
                   path.relative(path.resolve(__dirname, cfg.electron.root, 'src'), chunk.facadeModuleId);
+                log.warn('TEST', chunk.facadeModuleId, '->', relativePath);
                 if (relativePath.startsWith('../') || chunk.facadeModuleId.includes(cfg.common.root)) {
                   relativePath = path.relative(path.resolve(__dirname, cfg.common.root, 'src'), chunk.facadeModuleId);
                   return `electron/common/${relativePath.replace(/\\/g, '/').replace(/\.ts$/, '.js')}`;
