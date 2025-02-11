@@ -103,6 +103,11 @@ export default defineConfig(({command, mode}): UserConfig => {
 });
 
 function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
+  const electronPath = path.resolve(__dirname, cfg.electron.root, 'src');
+  log.info('Electron Path:', electronPath);
+  const commonPath = path.resolve(__dirname, cfg.common.root, 'src');
+  log.info('Common Path:', commonPath);
+
   return {
     name: 'vite-plugin-electron',
     configResolved() {
@@ -124,46 +129,38 @@ function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
           sourcemap: 'inline',
           reportCompressedSize: false,
           rollupOptions: {
-            external: id => id === 'electron' || id.includes('node:') || builtinModules.includes(id) ||
-              (!id.startsWith('@common/') && !path.join(id).includes(path.join(cfg.electron.root, 'src')) &&
-                !path.join(id).includes(path.join(cfg.common.root, 'src')) && /^[^./]/.test(id)),
-            // external: (id) => {
-            //   if (id.includes('@common')) {
-            //     log.warn('EXTERNAL CHECK:', id, `-> ${Ansi.green('internal')}`);
-            //     return false;
-            //   }
-            //
-            //   const isExternal =
-            //     id === 'electron' ||
-            //     id.includes('node:') ||
-            //     builtinModules.includes(id) ||
-            //     (!id.startsWith('@common/') &&
-            //       !path.join(id).includes(path.join(cfg.electron.root, 'src')) &&
-            //       !path.join(id).includes(path.join(cfg.common.root, 'src')) &&
-            //       /^[^./]/.test(id));
-            //
-            //   log.warn('EXTERNAL CHECK:', id, `-> ${isExternal ? Ansi.red('external') : Ansi.green('internal')}`);
-            //   return isExternal;
-            // },
+            external: (id) => {
+              if (id.includes('@common')) {
+                log.warn('EXTERNAL CHECK:', id, `-> ${Ansi.green('internal')}`);
+                return false;
+              }
+
+              const isExternal =
+                id === 'electron' || id.includes('node:') || builtinModules.includes(id) ||
+                (!id.startsWith('@common/') && !path.join(id).includes(electronPath) &&
+                  !path.join(id).includes(commonPath) && /^[^./]/.test(id));
+
+              log.warn('EXTERNAL CHECK:', id, `-> ${isExternal ? Ansi.red('external') : Ansi.green('internal')}`);
+              return isExternal;
+            },
             input: {
-              main: path.resolve(__dirname, cfg.electron.root, 'src/main.ts'),
+              main: path.resolve(electronPath, 'main.ts'),
             },
             preserveEntrySignatures: 'strict',
             output: {
               format: 'esm',
               entryFileNames: (chunk) => {
                 if (!chunk.facadeModuleId) {
-                  log.warn('Skipping chunk with null facadeModuleId:', chunk);
-                  return 'electron/unknown.js';
+                  log.error('Skipping chunk with null facadeModuleId:', chunk);
+                  return 'unknown.js';
                 }
-                let relativePath =
-                  path.relative(path.resolve(__dirname, cfg.electron.root, 'src'), chunk.facadeModuleId);
-                // log.warn('TEST', chunk.facadeModuleId, '->', relativePath);
+                const relativePath = path.relative(electronPath, chunk.facadeModuleId).replace(/\.ts$/, '.js');
+                log.warn('TEST:', chunk.facadeModuleId, '->', relativePath);
                 if (relativePath.startsWith('../') || chunk.facadeModuleId.includes(cfg.common.root)) {
-                  relativePath = path.relative(path.resolve(__dirname, cfg.common.root, 'src'), chunk.facadeModuleId);
-                  return `electron/common/${relativePath.replace(/\\/g, '/').replace(/\.ts$/, '.js')}`;
+                  return path.join('common', path.relative(commonPath, chunk.facadeModuleId))
+                    .replace(/\.ts$/, '.js');
                 }
-                return `electron/${relativePath.replace(/\\/g, '/').replace(/\.ts$/, '.js')}`;
+                return relativePath;
               },
               preserveModules: true,
               exports: 'named',
@@ -284,7 +281,7 @@ function vitePluginElectronPreload(command: 'serve' | 'build'): CustomPlugin {
             formats: ['cjs'],
           },
           minify: false,
-          outDir: path.join(cfg.output.electron, 'electron'),
+          outDir: cfg.output.electron,
           reportCompressedSize: false,
           rollupOptions: {
             input: entryPoint,
