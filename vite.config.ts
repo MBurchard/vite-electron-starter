@@ -127,24 +127,6 @@ function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
             external: id => id === 'electron' || id.includes('node:') || builtinModules.includes(id) ||
               (!id.startsWith('@common/') && !path.join(id).includes(path.join(cfg.electron.root, 'src')) &&
                 !path.join(id).includes(path.join(cfg.common.root, 'src')) && /^[^./]/.test(id)),
-            // external: (id) => {
-            //   if (id.includes('@common')) {
-            //     log.warn('EXTERNAL CHECK:', id, `-> ${Ansi.green('internal')}`);
-            //     return false;
-            //   }
-            //
-            //   const isExternal =
-            //     id === 'electron' ||
-            //     id.includes('node:') ||
-            //     builtinModules.includes(id) ||
-            //     (!id.startsWith('@common/') &&
-            //       !path.join(id).includes(path.join(cfg.electron.root, 'src')) &&
-            //       !path.join(id).includes(path.join(cfg.common.root, 'src')) &&
-            //       /^[^./]/.test(id));
-            //
-            //   log.warn('EXTERNAL CHECK:', id, `-> ${isExternal ? Ansi.red('external') : Ansi.green('internal')}`);
-            //   return isExternal;
-            // },
             input: {
               main: path.resolve(__dirname, cfg.electron.root, 'src/main.ts'),
             },
@@ -158,7 +140,6 @@ function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
                 }
                 let relativePath =
                   path.relative(path.resolve(__dirname, cfg.electron.root, 'src'), chunk.facadeModuleId);
-                // log.warn('TEST', chunk.facadeModuleId, '->', relativePath);
                 if (relativePath.startsWith('../') || chunk.facadeModuleId.includes(cfg.common.root)) {
                   relativePath = path.relative(path.resolve(__dirname, cfg.common.root, 'src'), chunk.facadeModuleId);
                   return `electron/common/${relativePath.replace(/\\/g, '/').replace(/\.ts$/, '.js')}`;
