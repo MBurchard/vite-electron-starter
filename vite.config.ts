@@ -104,9 +104,9 @@ export default defineConfig(({command, mode}): UserConfig => {
 
 function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
   const electronPath = path.resolve(__dirname, cfg.electron.root, 'src');
-  log.info('Electron Path:', electronPath);
+  log.debug('Electron Path:', electronPath);
   const commonPath = path.resolve(__dirname, cfg.common.root, 'src');
-  log.info('Common Path:', commonPath);
+  log.debug('Common Path:', commonPath);
 
   return {
     name: 'vite-plugin-electron',
@@ -130,22 +130,22 @@ function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
           reportCompressedSize: false,
           rollupOptions: {
             external: (id) => {
-              if (id.startsWith(path.resolve(electronPath, 'common') + path.sep)) {
-                const msg = `Project has a 'common' folder under '${cfg.electron.root}'`;
+              const _path = path.normalize(id);
+              if (_path.startsWith(path.resolve(electronPath, 'common') + path.sep)) {
+                const msg = `Name conflict with common module and common folder in '${cfg.electron.root}'`;
                 log.error(msg);
                 throw new Error(msg);
               }
-              if (id.includes('@common')) {
-                log.debug('EXTERNAL CHECK:', id, `-> ${Ansi.green('internal')}`);
+              if (_path.includes('@common')) {
+                log.debug('EXTERNAL CHECK:', _path, `-> ${Ansi.green('internal')}`);
                 return false;
               }
 
               const isExternal =
-                id === 'electron' || id.includes('node:') || builtinModules.includes(id) ||
-                (!id.startsWith('@common/') && !path.join(id).includes(electronPath) &&
-                  !path.join(id).includes(commonPath) && /^[^./]/.test(id));
+                _path === 'electron' || _path.includes('node:') || builtinModules.includes(_path) ||
+                (!_path.includes(electronPath) && !_path.includes(commonPath) && /^[^./]/.test(id));
 
-              log.debug('EXTERNAL CHECK:', id, `-> ${isExternal ? Ansi.red('external') : Ansi.green('internal')}`);
+              log.debug('EXTERNAL CHECK:', id, `: ${isExternal ? Ansi.red('external') : Ansi.green('internal')}`);
               return isExternal;
             },
             input: {
@@ -159,10 +159,11 @@ function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
                   log.error('Skipping chunk with null facadeModuleId:', chunk);
                   return 'unknown.js';
                 }
-                const relativePath = path.relative(electronPath, chunk.facadeModuleId).replace(/\.ts$/, '.js');
-                log.debug('TEST:', chunk.facadeModuleId, '->', relativePath);
-                if (relativePath.startsWith('../') && chunk.facadeModuleId.includes(commonPath)) {
-                  return path.join('common', path.relative(commonPath, chunk.facadeModuleId))
+                const chunkPath = path.normalize(chunk.facadeModuleId);
+                const relativePath = path.relative(electronPath, chunkPath).replace(/\.ts$/, '.js');
+                log.debug('TEST:', chunkPath, '->', relativePath);
+                if (relativePath.startsWith('..') && chunkPath.startsWith(commonPath)) {
+                  return path.join('common', path.relative(commonPath, chunkPath))
                     .replace(/\.ts$/, '.js');
                 }
                 return relativePath;
