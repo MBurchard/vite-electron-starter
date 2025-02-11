@@ -6,7 +6,7 @@ import {FileAppender} from '@mburchard/bit-log/dist/appender/FileAppender.js';
 import {LogLevel} from '@mburchard/bit-log/dist/definitions.js';
 import {app} from 'electron';
 import {getLogPath} from './electron-utils.js';
-import {fileExists, mkDir} from './file-utils';
+import {fileExists, mkDir} from './file-utils.js';
 import {registerFrontendListener} from './ipc.js';
 import 'source-map-support/register.js';
 
