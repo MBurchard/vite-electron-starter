@@ -6,15 +6,27 @@ const log = getLog('app.display.demo');
 const {backend} = window;
 
 function createOverlayElement(
-  left: string | number,
-  top: string | number,
+  top: string | number | null,
+  right: string | number | null,
+  bottom: string | number | null,
+  left: string | number | null,
   width: string | number,
   height: string | number,
 ): HTMLDivElement {
   const overlay = document.createElement('div');
   overlay.className = 'overlay';
-  overlay.style.left = typeof left === 'number' ? `${left}px` : left;
-  overlay.style.top = typeof top === 'number' ? `${top}px` : top;
+  if (top !== null) {
+    overlay.style.top = typeof top === 'number' ? `${top}px` : top;
+  }
+  if (right !== null) {
+    overlay.style.right = typeof right === 'number' ? `${right}px` : right;
+  }
+  if (bottom !== null) {
+    overlay.style.bottom = typeof bottom === 'number' ? `${bottom}px` : bottom;
+  }
+  if (left !== null) {
+    overlay.style.left = typeof left === 'number' ? `${left}px` : left;
+  }
   overlay.style.width = typeof width === 'number' ? `${width}px` : width;
   overlay.style.height = typeof height === 'number' ? `${height}px` : height;
   return overlay;
@@ -69,27 +81,27 @@ function visualiseDisplays(displays: Display[]) {
 
     const topBarHeight = (display.workArea.y - display.bounds.y) * scale;
     if (topBarHeight > 0) {
-      const topOverlay = createOverlayElement(0, 0, '100%', `${topBarHeight}px`);
+      const topOverlay = createOverlayElement(0, null, null, 0, '100%', `${topBarHeight}px`);
       displayElement.appendChild(topOverlay);
     }
 
     const bottomBarHeight =
       ((display.bounds.y + display.bounds.height) - (display.workArea.y + display.workArea.height)) * scale;
     if (bottomBarHeight > 0) {
-      const bottomOverlay = createOverlayElement(0, '100%', '100%', `${bottomBarHeight}px`);
+      const bottomOverlay = createOverlayElement(null, null, 0, 0, '100%', `${bottomBarHeight}px`);
       displayElement.appendChild(bottomOverlay);
     }
 
     const leftBarWidth = (display.workArea.x - display.bounds.x) * scale;
     if (leftBarWidth > 0) {
-      const leftOverlay = createOverlayElement(0, 0, `${leftBarWidth}px`, '100%');
+      const leftOverlay = createOverlayElement(0, null, null, 0, `${leftBarWidth}px`, '100%');
       displayElement.appendChild(leftOverlay);
     }
 
     const rightBarWidth =
       ((display.bounds.x + display.bounds.width) - (display.workArea.x + display.workArea.width)) * scale;
     if (rightBarWidth > 0) {
-      const rightOverlay = createOverlayElement('100%', 0, `${rightBarWidth}px`, '100%');
+      const rightOverlay = createOverlayElement(0, 0, null, null, `${rightBarWidth}px`, '100%');
       displayElement.appendChild(rightOverlay);
     }
 
