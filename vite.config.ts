@@ -29,7 +29,7 @@ configureLogging({
   },
 });
 
-const log = useLog('vite.config', LogLevel.INFO);
+const log = useLog('vite.config', LogLevel.DEBUG);
 
 export default defineConfig(({command, mode}): UserConfig => {
   if (!process.env.NODE_ENV) {
@@ -130,8 +130,13 @@ function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
           reportCompressedSize: false,
           rollupOptions: {
             external: (id) => {
+              if (id.startsWith(path.resolve(electronPath, 'common') + path.sep)) {
+                const msg = `Project has a 'common' folder under '${cfg.electron.root}'`;
+                log.error(msg);
+                throw new Error(msg);
+              }
               if (id.includes('@common')) {
-                log.warn('EXTERNAL CHECK:', id, `-> ${Ansi.green('internal')}`);
+                log.debug('EXTERNAL CHECK:', id, `-> ${Ansi.green('internal')}`);
                 return false;
               }
 
@@ -140,7 +145,7 @@ function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
                 (!id.startsWith('@common/') && !path.join(id).includes(electronPath) &&
                   !path.join(id).includes(commonPath) && /^[^./]/.test(id));
 
-              log.warn('EXTERNAL CHECK:', id, `-> ${isExternal ? Ansi.red('external') : Ansi.green('internal')}`);
+              log.debug('EXTERNAL CHECK:', id, `-> ${isExternal ? Ansi.red('external') : Ansi.green('internal')}`);
               return isExternal;
             },
             input: {
@@ -155,8 +160,8 @@ function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
                   return 'unknown.js';
                 }
                 const relativePath = path.relative(electronPath, chunk.facadeModuleId).replace(/\.ts$/, '.js');
-                log.warn('TEST:', chunk.facadeModuleId, '->', relativePath);
-                if (relativePath.startsWith('../') || chunk.facadeModuleId.includes(cfg.common.root)) {
+                log.debug('TEST:', chunk.facadeModuleId, '->', relativePath);
+                if (relativePath.startsWith('../') && chunk.facadeModuleId.includes(commonPath)) {
                   return path.join('common', path.relative(commonPath, chunk.facadeModuleId))
                     .replace(/\.ts$/, '.js');
                 }
