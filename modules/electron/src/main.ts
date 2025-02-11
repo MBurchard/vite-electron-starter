@@ -3,7 +3,6 @@ import type {BrowserWindow} from 'electron';
 import process from 'node:process';
 import {IpcChannels} from '@common/definitions.js';
 import {app} from 'electron';
-import {someCode} from './commonTest/someCode.js';
 import {registerFrontendHandler, registerFrontendListener, sendFrontend} from './ipc.js';
 import {getLogger} from './logging.js';
 import {createWindow, DISPLAY_WATCHER} from './WindowManager.js';
@@ -55,7 +54,7 @@ app.whenReady().then(async () => {
 
   registerFrontendListener(IpcChannels.showDisplayDemo, async () => {
     try {
-      log.debug('show display demo', someCode());
+      log.debug('show display demo');
       const displayDemoWindow = await createWindow({
         contentPage: 'displayDemo',
         windowOptions: {
