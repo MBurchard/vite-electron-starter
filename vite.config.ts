@@ -29,7 +29,7 @@ configureLogging({
   },
 });
 
-const log = useLog('vite.config', LogLevel.DEBUG);
+const log = useLog('vite.config', LogLevel.INFO);
 
 export default defineConfig(({command, mode}): UserConfig => {
   if (!process.env.NODE_ENV) {
