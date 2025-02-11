@@ -14,7 +14,7 @@
     "type": "git",
     "url": "https://github.com/MBurchard/vite-electron-starter"
   },
-  "main": "dist-electron/electron/main.js",
+  "main": "dist-electron/main.js",
   "engines": {
     "node": ">=22",
     "pnpm": ">=10",
