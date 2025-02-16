@@ -3,6 +3,7 @@
 import type {Plugin} from 'vite';
 
 export interface PageConfig {
+  id?: string;
   modules: string[];
   template?: string;
   title?: string;

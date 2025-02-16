@@ -79,6 +79,7 @@ export default defineConfig(({command, mode}): UserConfig => {
               log.debug('waiting for server url...');
               setTimeout(checkServerURL, 1);
             }
+
             checkServerURL();
           });
         },
@@ -102,6 +103,11 @@ export default defineConfig(({command, mode}): UserConfig => {
 });
 
 function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
+  const electronPath = path.resolve(__dirname, cfg.electron.root, 'src');
+  log.debug('Electron Path:', electronPath);
+  const commonPath = path.resolve(__dirname, cfg.common.root, 'src');
+  log.debug('Common Path:', commonPath);
+
   return {
     name: 'vite-plugin-electron',
     configResolved() {
@@ -123,18 +129,46 @@ function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
           sourcemap: 'inline',
           reportCompressedSize: false,
           rollupOptions: {
-            external: id => id === 'electron' || id.includes('node:') || builtinModules.includes(id) ||
-              (!id.startsWith('@common/') && !path.join(id).includes(path.join(cfg.electron.root, 'src')) &&
-                /^[^./]/.test(id)),
+            external: (id) => {
+              const _path = path.normalize(id);
+              if (_path.startsWith(path.resolve(electronPath, 'common') + path.sep)) {
+                const msg = `Name conflict with common module and common folder in '${cfg.electron.root}'`;
+                log.error(msg);
+                throw new Error(msg);
+              }
+              if (_path.includes('@common')) {
+                log.debug('EXTERNAL CHECK:', _path, `-> ${Ansi.green('internal')}`);
+                return false;
+              }
+
+              const isExternal =
+                _path === 'electron' || _path.includes('node:') || builtinModules.includes(_path) ||
+                (!_path.includes(electronPath) && !_path.includes(commonPath) && /^[^./]/.test(id));
+
+              log.debug('EXTERNAL CHECK:', id, `: ${isExternal ? Ansi.red('external') : Ansi.green('internal')}`);
+              return isExternal;
+            },
             input: {
-              main: path.resolve(__dirname, cfg.electron.root, 'src/main.ts'),
+              main: path.resolve(electronPath, 'main.ts'),
             },
             preserveEntrySignatures: 'strict',
             output: {
               format: 'esm',
-              entryFileNames: '[name].js',
+              entryFileNames: (chunk) => {
+                if (!chunk.facadeModuleId) {
+                  log.error('Skipping chunk with null facadeModuleId:', chunk);
+                  return 'unknown.js';
+                }
+                const chunkPath = path.normalize(chunk.facadeModuleId);
+                const relativePath = path.relative(electronPath, chunkPath).replace(/\.ts$/, '.js');
+                log.debug('TEST:', chunkPath, '->', relativePath);
+                if (relativePath.startsWith('..') && chunkPath.startsWith(commonPath)) {
+                  return path.join('common', path.relative(commonPath, chunkPath))
+                    .replace(/\.ts$/, '.js');
+                }
+                return relativePath;
+              },
               preserveModules: true,
-              preserveModulesRoot: 'electron',
               exports: 'named',
             },
           },
@@ -346,6 +380,7 @@ function vitePluginMultiPage(): Plugin {
       if (match) {
         const currentPage = match[1];
         const pageConfig = cfg.app.pages[currentPage];
+        pageConfig.id = currentPage;
         if (!pageConfig) {
           throw new Error(`No page config available for ${Ansi.cyan(currentPage)}, please check your configuration.`);
         }
@@ -362,7 +397,7 @@ function vitePluginMultiPage(): Plugin {
         const filename = path.join(ctx.filename);
         const pageConfig = contextMap.has(filename) ? contextMap.get(filename) : null;
         if (pageConfig) {
-          return html.replace('<%= PAGE_TITLE %>', pageConfig.title || '');
+          return html.replace('<%= PAGE_TITLE %>', pageConfig.title || '').replace('<%= PAGE %>', pageConfig.id ?? '');
         }
       }
       if (!ctx.originalUrl) {
@@ -379,9 +414,9 @@ function vitePluginMultiPage(): Plugin {
       }
       const template = loadTemplate(pageConfig);
       if (!template) {
-        return html.replace('<%= PAGE_TITLE %>', pageConfig.title || '');
+        return html.replace('<%= PAGE_TITLE %>', pageConfig.title ?? '').replace('<%= PAGE %>', pageName);
       }
-      return template.replace('<%= PAGE_TITLE %>', pageConfig.title || '');
+      return template.replace('<%= PAGE_TITLE %>', pageConfig.title ?? '').replace('<%= PAGE %>', pageName);
     },
   };
 }
