@@ -10,7 +10,6 @@ import process from 'node:process';
 import {configureLogging, useLog} from '@mburchard/bit-log';
 import {Ansi} from '@mburchard/bit-log/dist/ansi.js';
 import {ConsoleAppender} from '@mburchard/bit-log/dist/appender/ConsoleAppender.js';
-import {LogLevel} from '@mburchard/bit-log/dist/definitions.js';
 import electronPath from 'electron';
 import {build, defineConfig} from 'vite';
 import {viteElectronConfig as cfg} from './project.config.js';
@@ -29,7 +28,7 @@ configureLogging({
   },
 });
 
-const log = useLog('vite.config', LogLevel.INFO);
+const log = useLog('vite.config', 'INFO');
 
 export default defineConfig(({command, mode}): UserConfig => {
   if (!process.env.NODE_ENV) {
