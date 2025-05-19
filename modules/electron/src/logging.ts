@@ -3,7 +3,6 @@ import {configureLogging, useLog} from '@mburchard/bit-log';
 import {Ansi} from '@mburchard/bit-log/dist/ansi.js';
 import {ConsoleAppender} from '@mburchard/bit-log/dist/appender/ConsoleAppender.js';
 import {FileAppender} from '@mburchard/bit-log/dist/appender/FileAppender.js';
-import {LogLevel} from '@mburchard/bit-log/dist/definitions.js';
 import {app} from 'electron';
 import {registerFrontendListener} from './ipc.js';
 import {getLogPath} from './utils/electron-utils.js';
@@ -11,7 +10,7 @@ import {fileExists, mkDir} from './utils/file-utils.js';
 import 'source-map-support/register.js';
 
 // temporarily change the log level of the ROOT logger to DEBUG
-useLog('', LogLevel.DEBUG);
+useLog('', 'DEBUG');
 
 const log = useLog('electron.logging');
 
