@@ -39,14 +39,14 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^4.13.1",
-    "@tsconfig/node22": "^22.0.1",
+    "@antfu/eslint-config": "^4.13.2",
+    "@tsconfig/node22": "^22.0.2",
     "@types/jsdom": "^21.1.7",
-    "@types/node": "^22.15.19",
-    "electron": "^36.2.1",
+    "@types/node": "^22.15.21",
+    "electron": "^36.3.1",
     "electron-builder": "26.0.12",
     "eslint": "^9.27.0",
-    "npm-run-all2": "^8.0.2",
+    "npm-run-all2": "^8.0.3",
     "typescript": "~5.8.3",
     "vite": "^6.3.5",
     "vitest": "^3.1.4"
