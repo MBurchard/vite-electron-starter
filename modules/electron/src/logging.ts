@@ -1,8 +1,8 @@
-import type {ILogEvent} from '@mburchard/bit-log/dist/definitions.js';
+import type {ILogEvent} from '@mburchard/bit-log/definitions';
 import {configureLogging, useLog} from '@mburchard/bit-log';
-import {Ansi} from '@mburchard/bit-log/dist/ansi.js';
-import {ConsoleAppender} from '@mburchard/bit-log/dist/appender/ConsoleAppender.js';
-import {FileAppender} from '@mburchard/bit-log/dist/appender/FileAppender.js';
+import {Ansi} from '@mburchard/bit-log/ansi';
+import {ConsoleAppender} from '@mburchard/bit-log/appender/ConsoleAppender';
+import {FileAppender} from '@mburchard/bit-log/appender/FileAppender';
 import {app} from 'electron';
 import {registerFrontendListener} from './ipc.js';
 import {getLogPath} from './utils/electron-utils.js';
@@ -13,8 +13,6 @@ import 'source-map-support/register.js';
 useLog('', 'DEBUG');
 
 const log = useLog('electron.logging');
-
-export const getLogger = useLog;
 
 let isLoggingSetup = false;
 
@@ -55,6 +53,7 @@ async function setupApplicationLogging(): Promise<void> {
       },
       root: {
         appender: ['CONSOLE', 'APP_FILE'],
+        includeCallSite: true,
         level: 'DEBUG',
       },
       logger: {
@@ -80,3 +79,5 @@ async function setupApplicationLogging(): Promise<void> {
 }
 
 setupApplicationLogging().catch(reason => log.error('error during setup application logging', reason));
+
+export const getLogger = useLog;
