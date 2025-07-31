@@ -1,5 +1,5 @@
-import type {ILogEvent} from '@mburchard/bit-log/dist/definitions.js';
-import {AbstractBaseAppender} from '@mburchard/bit-log/dist/appender/AbstractBaseAppender.js';
+import type {ILogEvent} from '@mburchard/bit-log/definitions';
+import {AbstractBaseAppender} from '@mburchard/bit-log/appender/AbstractBaseAppender';
 
 export class BackendForwardingAppender extends AbstractBaseAppender {
   async handle(event: ILogEvent): Promise<void> {
