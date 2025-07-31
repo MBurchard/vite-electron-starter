@@ -34,7 +34,7 @@
     "fix-electron": "cd node_modules/electron && rm -rf dist && pnpm run postinstall"
   },
   "dependencies": {
-    "@mburchard/bit-log": "^0.8.1",
+    "@mburchard/bit-log": "^0.8.4",
     "source-map-support": "^0.5.21",
     "uuid": "^11.1.0"
   },
