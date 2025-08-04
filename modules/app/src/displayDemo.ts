@@ -32,6 +32,12 @@ function createOverlayElement(
   return overlay;
 }
 
+function renderBaseLayout() {
+  document.querySelector('#app')!.innerHTML = `
+  <div id="displays" class="displays"></div>
+  <div style="text-align: center">Try to double-click on the shown displays.</div>`;
+}
+
 function visualiseDisplays(displays: Display[]) {
   log.debug('visualise displays', displays);
 
@@ -43,8 +49,11 @@ function visualiseDisplays(displays: Display[]) {
 
   const scale = 800 / maxWidth;
 
-  const container = document.createElement('div');
-  container.className = 'displays';
+  const container = document.querySelector<HTMLDivElement>('#displays');
+  if (!container) {
+    return;
+  }
+  container.innerHTML = '';
   container.style.width = `${maxWidth * scale}px`;
   container.style.height = `${maxHeight * scale}px`;
 
@@ -107,20 +116,15 @@ function visualiseDisplays(displays: Display[]) {
 
     container.appendChild(displayElement);
   });
-
-  const app = document.querySelector('#app');
-  if (app) {
-    while (app.firstChild) {
-      app.removeChild(app.firstChild);
-    }
-    app.appendChild(container);
-  }
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
+  renderBaseLayout();
+
   // initial display setup
   const displayData = await backend.invoke<Display[]>('getDisplayData');
   visualiseDisplays(displayData);
+
   // react on display setup updates
   backend.on<[Display[]]>('updateDisplayData', visualiseDisplays);
 });
