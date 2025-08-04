@@ -1,5 +1,5 @@
 import type {IpcChannel, Versions} from '@common/definitions.js';
-import type {ILogEvent} from '@mburchard/bit-log/dist/definitions.js';
+import type {ILogEvent} from '@mburchard/bit-log/definitions';
 import {IpcChannels} from '@common/definitions.js';
 import {useLog} from '@mburchard/bit-log';
 import {contextBridge, ipcRenderer} from 'electron';
