@@ -5,33 +5,10 @@ import {IpcChannels} from '@common/definitions.js';
 import {app} from 'electron';
 import {registerFrontendHandler, registerFrontendListener, sendFrontend} from './ipc.js';
 import {getLogger} from './logging.js';
-import {createWindow, DISPLAY_WATCHER} from './WindowManager.js';
+import {DISPLAY_WATCHER} from './utils/DisplayWatcher.js';
+import {createWindow} from './WindowManager.js';
 
 const log = getLogger('electron.main');
-
-// async function showDemoPopup() {
-//   try {
-//     log.debug('showDemoPopup');
-//     const win = await createWindow({
-//       contentPage: 'popup',
-//       windowOptions: {
-//         frame: false,
-//         height: 200,
-//         movable: false,
-//         transparent: true,
-//         width: 400,
-//       },
-//       withDevTools: true,
-//     });
-//     setTimeout(() => {
-//       if (win && !win.isDestroyed()) {
-//         win.close();
-//       }
-//     }, 60000);
-//   } catch (e) {
-//     log.error('showDemoPopup', e);
-//   }
-// }
 
 app.whenReady().then(async () => {
   let mainWindow: BrowserWindow | undefined;
