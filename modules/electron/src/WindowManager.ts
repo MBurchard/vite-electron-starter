@@ -25,13 +25,13 @@ export async function createWindow(conf: WindowConfiguration): Promise<BrowserWi
   try {
     const startTS = Date.now();
     const windowOptions = conf.windowOptions || {};
-
     const showWindow = !(windowOptions.show === false);
-
     const windowId = uuidv4();
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
     const preloadJS = path.join(__dirname, 'preload.js');
+
     log.debug('using preload script:', preloadJS);
+
     const win = new BrowserWindow({
       ...windowOptions,
       ...{
@@ -52,11 +52,7 @@ export async function createWindow(conf: WindowConfiguration): Promise<BrowserWi
       unregisterFrontendListener(`windowFullyLoaded-${windowId}`, windowFullyLoadedListener);
     };
 
-    registerFrontendListener(`windowFullyLoaded-${windowId}`, windowFullyLoadedListener);
-
-    win.on('closed', () => {
-      unregisterFrontendListener(`windowFullyLoaded-${windowId}`, windowFullyLoadedListener);
-    });
+    registerFrontendListener(`windowFullyLoaded-${windowId}`, windowFullyLoadedListener, true);
 
     log.debug('Environment:', ENV);
     log.debug('VITE_DEV_SERVER_URL:', process.env.VITE_DEV_SERVER_URL);
