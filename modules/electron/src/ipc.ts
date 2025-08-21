@@ -57,9 +57,18 @@ export interface FrontendIpcListener {
  *
  * @param {IpcChannel} channel - The IPC channel to listen on.
  * @param {FrontendIpcListener} listener - A function that processes incoming events.
+ * @param {boolean} [once] - If true, the listener is invoked only once.
  */
-export function registerFrontendListener(channel: IpcChannel, listener: FrontendIpcListener): void {
-  ipcMain.on(channel, listener);
+export function registerFrontendListener(
+  channel: IpcChannel,
+  listener: FrontendIpcListener,
+  once: boolean = false,
+): void {
+  if (once) {
+    ipcMain.once(channel, listener);
+  } else {
+    ipcMain.on(channel, listener);
+  }
 }
 
 /**
