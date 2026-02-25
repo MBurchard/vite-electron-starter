@@ -44,6 +44,7 @@
     "@tsconfig/node24": "^24.0.4",
     "@types/jsdom": "^28.0.0",
     "@types/node": "^24.10.13",
+    "@vitest/coverage-v8": "^4.0.18",
     "electron": "^40.6.1",
     "electron-builder": "26.8.1",
     "electron-builder-squirrel-windows": "26.8.1",
