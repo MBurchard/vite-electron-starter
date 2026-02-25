@@ -1,3 +1,11 @@
+/**
+ * modules/electron/src/main.ts
+ *
+ * @file Electron main process entry point. Sets up IPC handlers for display data and version info, creates the main
+ * application window, and wires up the display demo window lifecycle.
+ *
+ * @author Martin Burchard
+ */
 import type {Display, Versions} from '@common/definitions.js';
 import type {BrowserWindow} from 'electron';
 import process from 'node:process';

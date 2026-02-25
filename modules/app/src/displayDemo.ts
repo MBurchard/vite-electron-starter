@@ -1,3 +1,11 @@
+/**
+ * modules/app/src/displayDemo.ts
+ *
+ * @file Renderer entry point for the display demo window. Visualizes all connected displays with their work areas
+ * and reacts to layout changes in real time.
+ *
+ * @author Martin Burchard
+ */
 import type {Display} from '@common/definitions.js';
 import {getLog} from '@app/logging.js';
 import '@css/style.css';
@@ -5,6 +13,17 @@ import '@css/style.css';
 const log = getLog('app.display.demo');
 const {backend} = window;
 
+/**
+ * Create an absolutely positioned overlay div for visualizing non-work-area regions (menu bar, dock, taskbar).
+ *
+ * @param top - CSS top value or null if not pinned to top.
+ * @param right - CSS right value or null if not pinned to right.
+ * @param bottom - CSS bottom value or null if not pinned to bottom.
+ * @param left - CSS left value or null if not pinned to left.
+ * @param width - CSS width value.
+ * @param height - CSS height value.
+ * @returns The configured overlay element.
+ */
 function createOverlayElement(
   top: string | number | null,
   right: string | number | null,
@@ -32,14 +51,22 @@ function createOverlayElement(
   return overlay;
 }
 
+/**
+ * Render the base HTML layout with the display container and instructions.
+ */
 function renderBaseLayout() {
   document.querySelector('#app')!.innerHTML = `
   <div id="displays" class="displays"></div>
   <div style="text-align: center">Try to double-click on the shown displays.</div>`;
 }
 
-function visualiseDisplays(displays: Display[]) {
-  log.debug('visualise displays', displays);
+/**
+ * Render a scaled visualization of all connected displays into the DOM.
+ *
+ * @param displays - Array of display objects to visualize.
+ */
+function visualizeDisplays(displays: Display[]) {
+  log.debug('visualize displays', displays);
 
   const minX = Math.min(...displays.map(d => d.bounds.x));
   const minY = Math.min(...displays.map(d => d.bounds.y));
@@ -123,8 +150,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // initial display setup
   const displayData = await backend.invoke<Display[]>('getDisplayData');
-  visualiseDisplays(displayData);
+  visualizeDisplays(displayData);
 
   // react on display setup updates
-  backend.on<[Display[]]>('updateDisplayData', visualiseDisplays);
+  backend.on<[Display[]]>('updateDisplayData', visualizeDisplays);
 });

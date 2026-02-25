@@ -1,3 +1,11 @@
+/**
+ * modules/app/src/index.ts
+ *
+ * @file Renderer entry point for the main application window. Displays version information and provides a button
+ * to open the display demo window.
+ *
+ * @author Martin Burchard
+ */
 import type {Versions} from '@common/definitions.js';
 import {getLog} from '@app/logging.js';
 import electronLogo from '@assets/electron.svg';

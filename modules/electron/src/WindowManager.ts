@@ -1,3 +1,12 @@
+/**
+ * modules/electron/src/WindowManager.ts
+ *
+ * @file Factory for creating Electron BrowserWindows with security defaults (context isolation, sandbox, no node
+ * integration). Handles preload script injection, window ID assignment, content page loading for both dev server
+ * and production builds, and window lifecycle tracking.
+ *
+ * @author Martin Burchard
+ */
 import type {BrowserWindowConstructorOptions} from 'electron';
 import type {FrontendIpcListener} from './ipc.js';
 import fs from 'node:fs/promises';
@@ -11,6 +20,9 @@ import {getLogger} from './logging/index.js';
 
 const log = getLogger('WindowManager');
 
+/**
+ * Configuration for creating a new BrowserWindow.
+ */
 interface WindowConfiguration {
   contentPage: string;
   windowOptions?: BrowserWindowConstructorOptions;
@@ -20,9 +32,8 @@ interface WindowConfiguration {
 const ENV = process.env.NODE_ENV ?? 'production';
 
 /**
- * Create and display a new BrowserWindow with the given configuration.
- * Sets up security defaults (context isolation, sandbox, no node integration),
- * injects a unique window ID, and loads the appropriate content page.
+ * Create and display a new BrowserWindow with the given configuration. Sets up security defaults (context isolation,
+ * sandbox, no node integration), injects a unique window ID, and loads the appropriate content page.
  *
  * @param conf - Window configuration including content page, options, and devtools flag.
  * @returns The created BrowserWindow, or undefined if an error occurred.
@@ -88,6 +99,6 @@ export async function createWindow(conf: WindowConfiguration): Promise<BrowserWi
 
     return win;
   } catch (e) {
-    log.error('Error in Function createWindow:', conf, '/n', e);
+    log.error('Error in Function createWindow:', conf, '\n', e);
   }
 }

@@ -1,9 +1,21 @@
+/**
+ * modules/common/src/definitions.ts
+ *
+ * @file Shared type definitions and IPC channel constants used by both the Electron main process and the renderer.
+ *
+ * @author Martin Burchard
+ */
+
+/**
+ * Extended display information including a flag indicating the primary display.
+ */
 export interface Display extends Electron.Display {
   primary: boolean;
 }
 
-// Defines all IPC Channels as a lookup object.
-// This provides clean typing, code completion, and avoids typos.
+/**
+ * All IPC channel identifiers as a lookup object. Provides clean typing, code completion, and avoids typos.
+ */
 export const IpcChannels = {
   // logs messages from the frontend to the backend
   frontendLogging: 'frontendLogging',
@@ -17,10 +29,14 @@ export const IpcChannels = {
   updateDisplayData: 'updateDisplayData',
 } as const;
 
-// The type IpcChannel includes all predefined IPC Channels,
-// but also allows for the use of other string values.
+/**
+ * Union of all predefined IPC channel names, plus any arbitrary string for extensibility.
+ */
 export type IpcChannel = typeof IpcChannels[keyof typeof IpcChannels] | (string & {});
 
+/**
+ * Version information for the Electron runtime components.
+ */
 export interface Versions {
   chrome: string;
   electron: string;

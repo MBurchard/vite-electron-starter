@@ -1,3 +1,12 @@
+/**
+ * modules/electron/src/ipc.ts
+ *
+ * @file IPC communication layer for the Electron main process. Provides functions to register handlers (request/
+ * response) and listeners (fire-and-forget) for frontend-to-backend communication, as well as broadcasting
+ * data to all renderer windows.
+ *
+ * @author Martin Burchard
+ */
 import type {IpcChannel} from '@common/definitions.js';
 import type {IpcMainEvent, IpcMainInvokeEvent} from 'electron';
 import {BrowserWindow, ipcMain} from 'electron';
@@ -18,12 +27,11 @@ export interface FrontendIpcHandler<T> {
 const ipcHandlers = new Map<IpcChannel, FrontendIpcHandler<any>>();
 
 /**
- * Registers a handler for IPC communication between the frontend and backend.
- * The handler can process incoming requests and return a response to the frontend.
+ * Register a handler for IPC communication between the frontend and backend. The handler can process incoming
+ * requests and return a response to the frontend.
  *
- * @template T - The expected return type of the handler.
- * @param {IpcChannel} channel - The IPC channel to listen on.
- * @param {FrontendIpcHandler<T>} handler - A function that handles incoming requests.
+ * @param channel - The IPC channel to listen on.
+ * @param handler - A function that handles incoming requests.
  */
 export function registerFrontendHandler<T>(channel: IpcChannel, handler: FrontendIpcHandler<T>): void {
   if (ipcHandlers.has(channel)) {
@@ -35,9 +43,9 @@ export function registerFrontendHandler<T>(channel: IpcChannel, handler: Fronten
 }
 
 /**
- * Unregisters a previously registered IPC handler.
+ * Unregister a previously registered IPC handler.
  *
- * @param {IpcChannel} channel - The IPC channel to remove the handler from.
+ * @param channel - The IPC channel to remove the handler from.
  */
 export function unregisterFrontendHandler(channel: IpcChannel): void {
   ipcHandlers.delete(channel);
@@ -52,12 +60,12 @@ export interface FrontendIpcListener {
 }
 
 /**
- * Registers a listener for one-way IPC communication from the frontend to the backend.
- * The listener reacts to events but does not return a response.
+ * Register a listener for one-way IPC communication from the frontend to the backend. The listener reacts to
+ * events but does not return a response.
  *
- * @param {IpcChannel} channel - The IPC channel to listen on.
- * @param {FrontendIpcListener} listener - A function that processes incoming events.
- * @param {boolean} [once] - If true, the listener is invoked only once.
+ * @param channel - The IPC channel to listen on.
+ * @param listener - A function that processes incoming events.
+ * @param once - If true, the listener is invoked only once.
  */
 export function registerFrontendListener(
   channel: IpcChannel,
@@ -72,10 +80,10 @@ export function registerFrontendListener(
 }
 
 /**
- * Unregisters a previously registered IPC listener.
+ * Unregister a previously registered IPC listener.
  *
- * @param {IpcChannel} channel - The IPC channel to stop listening on.
- * @param {FrontendIpcListener} listener - The function to remove.
+ * @param channel - The IPC channel to stop listening on.
+ * @param listener - The function to remove.
  */
 export function unregisterFrontendListener(channel: IpcChannel, listener: FrontendIpcListener): void {
   ipcMain.removeListener(channel, listener);
@@ -84,8 +92,8 @@ export function unregisterFrontendListener(channel: IpcChannel, listener: Fronte
 /**
  * Send data to all renderer processes.
  *
- * @param {IpcChannel} channel - The IPC channel to send data on.
- * @param {...any[]} args - The data arguments to send.
+ * @param channel - The IPC channel to send data on.
+ * @param args - The data arguments to send.
  */
 export function sendFrontend<T extends any[]>(channel: IpcChannel, ...args: T): void {
   const allWindows = BrowserWindow.getAllWindows();
