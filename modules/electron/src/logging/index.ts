@@ -2,12 +2,12 @@ import type {IAppender, ILogEvent} from '@mburchard/bit-log/definitions';
 import {configureLogging, useLog} from '@mburchard/bit-log';
 import {Ansi} from '@mburchard/bit-log/ansi';
 import {ConsoleAppender} from '@mburchard/bit-log/appender/ConsoleAppender';
-import {FileAppender} from '@mburchard/bit-log/appender/FileAppender';
 import {app} from 'electron';
 import {registerFrontendListener} from '../ipc.js';
 import {getLogPath} from '../utils/electron-utils.js';
 import {fileExists, mkDir} from '../utils/file-utils.js';
 import {PipelineAppender} from './PipelineAppender.js';
+import {RotatingFileAppender} from './RotatingFileAppender.js';
 import 'source-map-support/register.js';
 
 // temporarily change the log level of the ROOT logger to DEBUG
@@ -18,9 +18,9 @@ const log = useLog('electron.logging');
 let isLoggingSetup = false;
 
 /**
- * Initialise the application logging pipeline. Creates the log directory if needed,
- * configures the PipelineAppender with Console + File delegates, and wires up
- * the frontend IPC listener so renderer events flow through the same pipeline.
+ * Initialize the application logging pipeline. Creates the log directory if needed, configures the PipelineAppender
+ * with Console + File delegates, and wires up the frontend IPC listener so renderer events flow through the same
+ * pipeline.
  */
 async function setupApplicationLogging(): Promise<void> {
   if (isLoggingSetup) {
@@ -47,11 +47,13 @@ async function setupApplicationLogging(): Promise<void> {
               pretty: true,
             },
             FILE: {
-              Class: FileAppender,
+              Class: RotatingFileAppender,
               baseName: 'app',
               filePath: logPath,
               colored: true,
               pretty: true,
+              maxFileSize: 1024 * 1024,
+              maxAgeDays: 30,
             },
           },
         },

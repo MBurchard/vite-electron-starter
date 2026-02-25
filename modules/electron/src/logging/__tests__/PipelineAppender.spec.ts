@@ -1,8 +1,21 @@
+/**
+ * modules/electron/src/logging/__tests__/PipelineAppender.spec.ts
+ *
+ * @file Tests for PipelineAppender covering buffer ordering, timer-based flushing, origin prefix handling,
+ * path shortening, level filtering, delegate management, and edge cases.
+ */
 import type {IAppender, ILogEvent} from '@mburchard/bit-log/definitions';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {PipelineAppender} from '../PipelineAppender.js';
 
-/** Create a minimal ILogEvent with the given timestamp and optional callSite. */
+/**
+ * Create a minimal ILogEvent with the given timestamp and optional callSite.
+ *
+ * @param timestampMs - Millisecond timestamp for the event.
+ * @param name - Logger name (default: 'test').
+ * @param file - Optional file path for callSite.
+ * @returns A valid ILogEvent.
+ */
 function makeEvent(timestampMs: number, name: string = 'test', file?: string): ILogEvent {
   return {
     level: 'INFO',
@@ -13,7 +26,11 @@ function makeEvent(timestampMs: number, name: string = 'test', file?: string): I
   };
 }
 
-/** Create a mock delegate appender that records handled events. */
+/**
+ * Create a mock delegate appender that records handled events.
+ *
+ * @returns An object with the mock appender and the list of captured events.
+ */
 function mockDelegate(): {appender: IAppender; events: ILogEvent[]} {
   const events: ILogEvent[] = [];
   const appender: IAppender = {
@@ -86,7 +103,7 @@ describe('pipelineAppender', () => {
     await pipeline.handle(makeEvent(200));
     vi.advanceTimersByTime(30);
 
-    // 60ms total, but timer was reset after 30ms — still 20ms remaining
+    // 60ms total, but timer was reset after 30ms; still 20ms remaining
     expect(delegate.events).toHaveLength(0);
 
     vi.advanceTimersByTime(20);
@@ -171,6 +188,22 @@ describe('pipelineAppender', () => {
     expect(delegate.events[0].callSite?.file).toBe('Frontend: plain-file.ts');
   });
 
+  it('should handle frontend URL with protocol but no path separator after host', () => {
+    pipeline.handleFrontendEvent(makeEvent(100, 'test', 'custom://hostonly'));
+
+    expect(delegate.events[0].callSite?.file).toBe('Frontend: custom://hostonly');
+  });
+
+  it('should handle stripped path without leading slash (else branch)', async () => {
+    // backendBasePath is a prefix of the path, but the remainder has no leading slash
+    pipeline.backendBasePath = '/Users/dev/project';
+    await pipeline.handle(makeEvent(100, 'test', '/Users/dev/projectlib/util.ts'));
+    pipeline.close();
+
+    // Stripped remainder is "lib/util.ts" (no leading slash), so the else branch keeps it as-is
+    expect(delegate.events[0].callSite?.file).toBe('Backend : lib/util.ts');
+  });
+
   // ---- Edge cases ----
 
   it('should handle events without callSite gracefully', async () => {
@@ -192,12 +225,41 @@ describe('pipelineAppender', () => {
     expect(originalFile).toBe('original.ts');
   });
 
-  it('should respect level filter via willHandle', async () => {
+  it('should respect level filter on handle()', async () => {
     pipeline.level = 'WARN';
-    await pipeline.handle(makeEvent(100)); // level is INFO — should be filtered
+    await pipeline.handle(makeEvent(100));
     pipeline.close();
 
     expect(delegate.events).toHaveLength(0);
+  });
+
+  it('should respect level filter on handleFrontendEvent()', () => {
+    pipeline.level = 'WARN';
+    pipeline.handleFrontendEvent(makeEvent(100));
+
+    expect(delegate.events).toHaveLength(0);
+  });
+
+  it('should not flush when no events match the cutoff timestamp', async () => {
+    await pipeline.handle(makeEvent(300));
+    // Frontend event with earlier timestamp; no buffered events are <= 100
+    pipeline.handleFrontendEvent(makeEvent(100));
+
+    // Only the frontend event itself (ts 100) was flushed, not the backend event (ts 300)
+    expect(delegate.events).toHaveLength(1);
+    expect(delegate.events[0].payload).toEqual(['event-100']);
+  });
+
+  it('should skip delegates that filter via willHandle', async () => {
+    const filtering = mockDelegate();
+    (filtering.appender.willHandle as ReturnType<typeof vi.fn>).mockReturnValue(false);
+    pipeline.addDelegate('FILTERING', filtering.appender);
+
+    await pipeline.handle(makeEvent(100));
+    pipeline.close();
+
+    expect(delegate.events).toHaveLength(1);
+    expect(filtering.events).toHaveLength(0);
   });
 
   // ---- Multi-delegate ----
@@ -213,13 +275,18 @@ describe('pipelineAppender', () => {
     expect(second.events).toHaveLength(1);
   });
 
-  // ---- delegates setter ----
+  // ---- Delegate management ----
 
-  it('should instantiate delegates from config via setter', async () => {
+  it('should expose delegates via getter', () => {
+    expect(pipeline.delegates).toHaveProperty('MOCK');
+    expect(pipeline.delegates.MOCK).toBe(delegate.appender);
+  });
+
+  it('should instantiate delegates from config via setter', () => {
     const freshPipeline = new PipelineAppender();
     freshPipeline.maxDelay = 50;
 
-    // Real class — vi.fn() arrow functions are not constructable
+    // Real class; vi.fn() arrow functions are not constructable
     class MockAppender {
       colored?: boolean;
       pretty?: boolean;
@@ -241,5 +308,26 @@ describe('pipelineAppender', () => {
     const instance = freshPipeline._delegates.TEST as MockAppender;
     expect(instance.colored).toBe(true);
     expect(instance.pretty).toBe(true);
+  });
+
+  it('should pass level to delegates when configured', () => {
+    const freshPipeline = new PipelineAppender();
+
+    class MockAppender {
+      level?: unknown;
+      handle = vi.fn(async () => {});
+      willHandle = vi.fn(() => true);
+    }
+
+    Reflect.set(freshPipeline, 'delegates', {
+      TEST: {
+        Class: MockAppender,
+        level: 'WARN',
+      },
+    });
+
+    // @ts-expect-error accessing private _delegates for testing
+    const instance = freshPipeline._delegates.TEST as MockAppender;
+    expect(instance.level).toBe('WARN');
   });
 });
