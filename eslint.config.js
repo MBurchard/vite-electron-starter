@@ -9,7 +9,7 @@ export default antfu({
   },
 }, {
   rules: {
-    curly: 'off',
+    curly: ['error', 'all'],
     'regexp/strict': 'off',
     'style/block-spacing': ['error', 'never'],
     'style/brace-style': ['error', '1tbs'],
@@ -25,7 +25,7 @@ export default antfu({
     'style/max-len': 'off',
   },
 }, {
-  files: ['**/package.json'],
+  files: ['**/*.json'],
   rules: {
     'style/max-len': 'off',
   },

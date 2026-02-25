@@ -1,10 +1,14 @@
 import type {Display} from '@common/definitions.js';
 import {EventEmitter} from 'node:events';
 import {app, screen} from 'electron';
-import {getLogger} from '../logging.js';
+import {getLogger} from '../logging/index.js';
 
 const log = getLogger('DisplayWatcher');
 
+/**
+ * Singleton that monitors connected displays and emits 'update' events
+ * whenever the display layout changes (added, removed, or metrics changed).
+ */
 class DisplayWatcher extends EventEmitter {
   private static instance: DisplayWatcher;
   private currentDisplays: Display[] = [];
@@ -14,10 +18,16 @@ class DisplayWatcher extends EventEmitter {
     this.init().catch(reason => log.error('error during DisplayWatcher init', reason));
   }
 
+  /**
+   * Return the current snapshot of all connected displays.
+   */
   public getDisplays(): Display[] {
     return this.currentDisplays;
   }
 
+  /**
+   * Return the singleton instance, creating it on first access.
+   */
   public static getInstance(): DisplayWatcher {
     if (!DisplayWatcher.instance) {
       DisplayWatcher.instance = new DisplayWatcher();
@@ -25,11 +35,17 @@ class DisplayWatcher extends EventEmitter {
     return DisplayWatcher.instance;
   }
 
+  /**
+   * Wait for Electron to be ready, then start monitoring display changes.
+   */
   private async init() {
     await app.whenReady();
     this.startWatching();
   }
 
+  /**
+   * Register screen event listeners and perform the initial display snapshot.
+   */
   private startWatching() {
     const updateDisplays = () => {
       const primaryDisplayId = screen.getPrimaryDisplay().id;
