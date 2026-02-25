@@ -1,3 +1,8 @@
+/**
+ * modules/common/src/__tests__/definitions.spec.ts
+ *
+ * @file Tests for shared IPC channel definitions.
+ */
 import {describe, expect, it} from 'vitest';
 import {IpcChannels} from '../definitions.js';
 

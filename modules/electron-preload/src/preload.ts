@@ -1,3 +1,11 @@
+/**
+ * modules/electron-preload/src/preload.ts
+ *
+ * @file Preload script that bridges the isolated renderer context with the Electron main process. Exposes a typed
+ * `window.backend` API via contextBridge for IPC communication (invoke, emit, on/off) and log forwarding.
+ *
+ * @author Martin Burchard
+ */
 import type {IpcChannel, Versions} from '@common/definitions.js';
 import type {ILogEvent} from '@mburchard/bit-log/definitions';
 import {IpcChannels} from '@common/definitions.js';
@@ -6,6 +14,11 @@ import {contextBridge, ipcRenderer} from 'electron';
 
 const log = useLog('electron.preload');
 
+/**
+ * Extract the window ID from the process argv injected by the WindowManager.
+ *
+ * @returns The window ID string, or undefined if not found.
+ */
 function getWindowId(): string | undefined {
   // It's already declared within the preload environment
   // eslint-disable-next-line node/prefer-global/process
@@ -16,19 +29,19 @@ function getWindowId(): string | undefined {
 /**
  * Request some data/information from the Electron main process.
  *
- * @param {IpcChannel} channel
- * @param args
- * @return {Promise<*>}
+ * @param channel - The IPC channel to invoke.
+ * @param args - Additional arguments to pass.
+ * @returns The response from the main process handler.
  */
 async function invoke<T>(channel: IpcChannel, ...args: any[]): Promise<T> {
   return ipcRenderer.invoke(channel, getWindowId(), ...args);
 }
 
 /**
- * Send some data/information to the Electron main process.
+ * Send some data/information to the Electron main process (fire-and-forget).
  *
- * @param {IpcChannel} channel
- * @param args
+ * @param channel - The IPC channel to send on.
+ * @param args - Additional arguments to pass.
  */
 function emit(channel: IpcChannel, ...args: any[]): void {
   ipcRenderer.send(channel, getWindowId(), ...args);
@@ -39,8 +52,8 @@ const backendListeners = new Map<IpcChannel, WeakMap<(...args: any[]) => void, (
 /**
  * Listen for updates with data from the Electron main process.
  *
- * @param {IpcChannel} channel
- * @param {Function} callback - Callback function that receives multiple arguments.
+ * @param channel - The IPC channel to listen on.
+ * @param callback - Callback function that receives multiple arguments.
  */
 function on<T extends any[]>(channel: IpcChannel, callback: (...args: T) => void): void {
   const listener = (_event: Electron.IpcRendererEvent, ...args: T) => callback(...args);
@@ -54,8 +67,8 @@ function on<T extends any[]>(channel: IpcChannel, callback: (...args: T) => void
 /**
  * Remove a previously registered event listener.
  *
- * @param {IpcChannel} channel
- * @param {(event: any) => void} callback
+ * @param channel - The IPC channel to stop listening on.
+ * @param callback - The callback to remove.
  */
 function off<T extends any[]>(channel: IpcChannel, callback: (...args: T) => void): void {
   const channelListeners = backendListeners.get(channel);
@@ -68,6 +81,9 @@ function off<T extends any[]>(channel: IpcChannel, callback: (...args: T) => voi
   }
 }
 
+/**
+ * Typed interface for the backend bridge exposed to the renderer via contextBridge.
+ */
 export interface Backend {
   emit: (channel: IpcChannel, ...args: any[]) => void;
   forwardLogEvent: (event: ILogEvent) => void;

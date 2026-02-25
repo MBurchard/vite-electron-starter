@@ -8,11 +8,11 @@
     },
     "types": ["node", "vitest"]
   },
-  "include": [
-    "modules/**/*.spec.ts"
-  ],
   "references": [
     { "path": "./tsconfig.node.json" },
     { "path": "./tsconfig.app.json" }
+  ],
+  "include": [
+    "modules/**/*.spec.ts"
   ]
 }

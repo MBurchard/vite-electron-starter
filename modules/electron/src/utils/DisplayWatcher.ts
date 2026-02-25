@@ -1,3 +1,11 @@
+/**
+ * modules/electron/src/utils/DisplayWatcher.ts
+ *
+ * @file Singleton that monitors connected displays and emits 'update' events whenever the display layout changes
+ * (added, removed, or metrics changed). Wraps Electron's screen API with a cleaner event interface.
+ *
+ * @author Martin Burchard
+ */
 import type {Display} from '@common/definitions.js';
 import {EventEmitter} from 'node:events';
 import {app, screen} from 'electron';
@@ -6,8 +14,8 @@ import {getLogger} from '../logging/index.js';
 const log = getLogger('DisplayWatcher');
 
 /**
- * Singleton that monitors connected displays and emits 'update' events
- * whenever the display layout changes (added, removed, or metrics changed).
+ * Singleton that monitors connected displays and emits 'update' events whenever the display layout changes
+ * (added, removed, or metrics changed).
  */
 class DisplayWatcher extends EventEmitter {
   private static instance: DisplayWatcher;
@@ -20,6 +28,8 @@ class DisplayWatcher extends EventEmitter {
 
   /**
    * Return the current snapshot of all connected displays.
+   *
+   * @returns Array of display objects with primary flag.
    */
   public getDisplays(): Display[] {
     return this.currentDisplays;
@@ -27,6 +37,8 @@ class DisplayWatcher extends EventEmitter {
 
   /**
    * Return the singleton instance, creating it on first access.
+   *
+   * @returns The DisplayWatcher singleton.
    */
   public static getInstance(): DisplayWatcher {
     if (!DisplayWatcher.instance) {
@@ -67,10 +79,24 @@ class DisplayWatcher extends EventEmitter {
     screen.on('display-metrics-changed', updateDisplays);
   }
 
+  /**
+   * Register a listener for display layout updates.
+   *
+   * @param event - The event name (always 'update').
+   * @param listener - Callback receiving the updated display array.
+   * @returns This instance for chaining.
+   */
   public on(event: 'update', listener: (displays: Display[]) => void): this {
     return super.on(event, listener);
   }
 
+  /**
+   * Remove a previously registered display update listener.
+   *
+   * @param event - The event name (always 'update').
+   * @param listener - The callback to remove.
+   * @returns This instance for chaining.
+   */
   public off(event: 'update', listener: (displays: Display[]) => void): this {
     return super.off(event, listener);
   }
