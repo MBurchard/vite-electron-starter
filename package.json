@@ -1,8 +1,8 @@
 {
   "name": "@mburchard/vite-electron-starter",
   "type": "module",
-  "version": "0.2.0",
-  "packageManager": "pnpm@10.15.0+sha512.486ebc259d3e999a4e8691ce03b5cac4a71cbeca39372a9b762cb500cfdf0873e2cb16abe3d951b1ee2cf012503f027b98b6584e4df22524e0c7450d9ec7aa7b",
+  "version": "0.3.0",
+  "packageManager": "pnpm@10.30.1+sha512.3590e550d5384caa39bd5c7c739f72270234b2f6059e13018f975c313b1eb9fefcc09714048765d4d9efe961382c312e624572c0420762bdc5d5940cdf9be73a",
   "description": "Starter template for fast and efficient Electron development using Vite and TypeScript",
   "author": {
     "name": "Martin Burchard",
@@ -21,45 +21,36 @@
     "npm": ">=11"
   },
   "scripts": {
-    "dev": "vite",
-    "typecheck:app": "tsc --project tsconfig.app.json",
-    "typecheck:electron": "tsc --project tsconfig.node.json",
-    "typecheck": "run-p typecheck:app typecheck:electron",
-    "build-only": "vite build",
-    "build": "run-s typecheck build-only",
-    "preview": "electron .",
-    "dist": "electron-builder --config electron-builder.config.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --project tsconfig.typecheck.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "build": "run-s typecheck build-only",
+    "build-only": "vite build",
+    "dev": "vite",
+    "preview": "electron .",
+    "dist": "electron-builder --config electron-builder.config.js",
     "fix-electron": "cd node_modules/electron && rm -rf dist && pnpm run postinstall"
   },
   "dependencies": {
-    "@mburchard/bit-log": "^0.8.4",
-    "source-map-support": "^0.5.21",
-    "uuid": "^11.1.0"
+    "@jridgewell/trace-mapping": "^0.3.31",
+    "@mburchard/bit-log": "^1.2.1",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^5.2.1",
-    "@tsconfig/node22": "^22.0.2",
-    "@types/jsdom": "^21.1.7",
-    "@types/node": "^22.17.2",
-    "electron": "^37.3.1",
-    "electron-builder": "26.0.12",
-    "eslint": "^9.33.0",
+    "@antfu/eslint-config": "^7.6.1",
+    "@tsconfig/node24": "^24.0.4",
+    "@types/jsdom": "^28.0.0",
+    "@types/node": "^24.10.13",
+    "electron": "^40.6.1",
+    "electron-builder": "26.8.1",
+    "electron-builder-squirrel-windows": "26.8.1",
+    "eslint": "^10.0.2",
     "npm-run-all2": "^8.0.4",
-    "typescript": "~5.9.2",
-    "vite": "^7.1.3",
-    "vitest": "^3.2.4"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "electron",
-      "electron-winstaller",
-      "esbuild"
-    ]
-  },
-  "overrides": {
-    "dmg-builder": "26.0.12",
-    "electron-builder-squirrel-windows": "26.0.12"
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1",
+    "vitest": "^4.0.18"
   }
 }

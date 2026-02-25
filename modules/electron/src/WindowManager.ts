@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {app, BrowserWindow} from 'electron';
 import {v4 as uuidv4} from 'uuid';
 import {registerFrontendListener, unregisterFrontendListener} from './ipc.js';
-import {getLogger} from './logging.js';
+import {getLogger} from './logging/index.js';
 
 const log = getLogger('WindowManager');
 
@@ -19,6 +19,14 @@ interface WindowConfiguration {
 
 const ENV = process.env.NODE_ENV ?? 'production';
 
+/**
+ * Create and display a new BrowserWindow with the given configuration.
+ * Sets up security defaults (context isolation, sandbox, no node integration),
+ * injects a unique window ID, and loads the appropriate content page.
+ *
+ * @param conf - Window configuration including content page, options, and devtools flag.
+ * @returns The created BrowserWindow, or undefined if an error occurred.
+ */
 export async function createWindow(conf: WindowConfiguration): Promise<BrowserWindow | undefined> {
   try {
     const startTS = Date.now();

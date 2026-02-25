@@ -1,7 +1,7 @@
 import type {IpcChannel} from '@common/definitions.js';
 import type {IpcMainEvent, IpcMainInvokeEvent} from 'electron';
 import {BrowserWindow, ipcMain} from 'electron';
-import {getLogger} from './logging.js';
+import {getLogger} from './logging/index.js';
 
 const log = getLogger('electron.ipc');
 

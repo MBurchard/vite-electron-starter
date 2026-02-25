@@ -8,6 +8,9 @@ import '@css/style.css';
 const log = getLog('app.main');
 const {backend} = window;
 
+/**
+ * Request the backend to open the display demo window.
+ */
 function showDisplayDemo() {
   log.debug('show display demo');
   backend.emit('showDisplayDemo');
@@ -40,4 +43,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     </p>
   </div>`;
   document.querySelector<HTMLButtonElement>('#displayDemoBtn')?.addEventListener('click', showDisplayDemo);
+
+  // TODO: remove test error after source map resolver testing
+  try {
+    throw new Error('Test error from frontend index.ts');
+  } catch (e) {
+    log.error('Caught test error:', e);
+  }
 });

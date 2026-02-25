@@ -4,7 +4,7 @@ import process from 'node:process';
 import {IpcChannels} from '@common/definitions.js';
 import {app} from 'electron';
 import {registerFrontendHandler, registerFrontendListener, sendFrontend} from './ipc.js';
-import {getLogger} from './logging.js';
+import {getLogger} from './logging/index.js';
 import {DISPLAY_WATCHER} from './utils/DisplayWatcher.js';
 import {createWindow} from './WindowManager.js';
 
@@ -65,4 +65,11 @@ app.whenReady().then(async () => {
   });
 
   log.debug('Electron app is ready');
+
+  // TODO: remove test error after source map resolver testing
+  try {
+    throw new Error('Test error from backend main.ts');
+  } catch (e) {
+    log.error('Caught test error:', e);
+  }
 }).catch(reason => log.error('error during electron app ready:', reason));

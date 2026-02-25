@@ -1,6 +1,9 @@
 import {BackendForwardingAppender} from '@app/BackendForwardingAppender.js';
-import {configureLogging, useLog} from '@mburchard/bit-log';
+import {originalPositionFor, TraceMap} from '@jridgewell/trace-mapping';
+import {configureLogging, configureSourceMapResolver, useLog} from '@mburchard/bit-log';
 import {ConsoleAppender} from '@mburchard/bit-log/appender/ConsoleAppender';
+
+configureSourceMapResolver(TraceMap, originalPositionFor);
 
 configureLogging({
   appender: {

@@ -10,7 +10,7 @@ import process from 'node:process';
 import {configureLogging, useLog} from '@mburchard/bit-log';
 import {Ansi} from '@mburchard/bit-log/ansi';
 import {ConsoleAppender} from '@mburchard/bit-log/appender/ConsoleAppender';
-import electronPath from 'electron';
+import electronBinary from 'electron';
 import {build, defineConfig} from 'vite';
 import {viteElectronConfig as cfg} from './project.config.js';
 
@@ -210,7 +210,7 @@ function vitePluginElectronHotReload(command: 'serve' | 'build'): CustomPlugin {
       electronApp.kill('SIGINT');
       electronApp = null;
     }
-    electronApp = spawn(String(electronPath), ['--inspect', '.'], {
+    electronApp = spawn(String(electronBinary), ['--inspect', '.'], {
       stdio: 'inherit',
     });
     electronApp.addListener('exit', cleanExit);
@@ -379,16 +379,15 @@ function vitePluginMultiPage(): Plugin {
       if (match) {
         const currentPage = match[1];
         const pageConfig = cfg.app.pages[currentPage];
-        pageConfig.id = currentPage;
         if (!pageConfig) {
           throw new Error(`No page config available for ${Ansi.cyan(currentPage)}, please check your configuration.`);
         }
+        pageConfig.id = currentPage;
         const resolvedId = path.resolve(__dirname, cfg.app.root, `${currentPage}.html`);
         log.debug(`resolve ID:`, id, 'to: ', resolvedId);
         contextMap.set(resolvedId, pageConfig);
         return resolvedId;
       }
-      return id;
     },
 
     transformIndexHtml(html, ctx) {
