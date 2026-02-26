@@ -11,7 +11,7 @@ import type {BrowserWindow} from 'electron';
 import process from 'node:process';
 import {IpcChannels} from '@common/definitions.js';
 import {app} from 'electron';
-import {registerFrontendHandler, registerFrontendListener, sendFrontend} from './ipc.js';
+import {broadcast, handleFromRenderer, onFromRenderer} from './ipc.js';
 import {getLogger} from './logging/index.js';
 import {DISPLAY_WATCHER} from './utils/DisplayWatcher.js';
 import {createWindow} from './WindowManager.js';
@@ -21,15 +21,15 @@ const log = getLogger('electron.main');
 app.whenReady().then(async () => {
   let mainWindow: BrowserWindow | undefined;
 
-  registerFrontendHandler(IpcChannels.getDisplayData, (): Display[] => {
+  handleFromRenderer(IpcChannels.getDisplayData, (): Display[] => {
     return DISPLAY_WATCHER.getDisplays();
   });
 
   DISPLAY_WATCHER.on('update', (displays: Display[]) => {
-    sendFrontend(IpcChannels.updateDisplayData, displays);
+    broadcast(IpcChannels.updateDisplayData, displays);
   });
 
-  registerFrontendHandler(IpcChannels.getVersions, (): Versions => {
+  handleFromRenderer(IpcChannels.getVersions, (): Versions => {
     return {
       chrome: process.versions.chrome,
       electron: process.versions.electron,
@@ -37,7 +37,7 @@ app.whenReady().then(async () => {
     };
   });
 
-  registerFrontendListener(IpcChannels.showDisplayDemo, async () => {
+  onFromRenderer(IpcChannels.showDisplayDemo, async () => {
     try {
       log.debug('show display demo');
       const displayDemoWindow = await createWindow({
@@ -73,11 +73,4 @@ app.whenReady().then(async () => {
   });
 
   log.debug('Electron app is ready');
-
-  // TODO: remove test error after source map resolver testing
-  try {
-    throw new Error('Test error from backend main.ts');
-  } catch (e) {
-    log.error('Caught test error:', e);
-  }
 }).catch(reason => log.error('error during electron app ready:', reason));

@@ -3,7 +3,7 @@ import {configureLogging, useLog} from '@mburchard/bit-log';
 import {Ansi} from '@mburchard/bit-log/ansi';
 import {ConsoleAppender} from '@mburchard/bit-log/appender/ConsoleAppender';
 import {app} from 'electron';
-import {registerFrontendListener} from '../ipc.js';
+import {onFromRenderer} from '../ipc.js';
 import {getLogPath} from '../utils/electron-utils.js';
 import {fileExists, mkDir} from '../utils/file-utils.js';
 import {PipelineAppender} from './PipelineAppender.js';
@@ -72,7 +72,7 @@ async function setupApplicationLogging(): Promise<void> {
     // Frontend IPC → PipelineAppender
     const rootLogger = useLog('') as unknown as {appender: Record<string, IAppender>};
     const pipeline = rootLogger.appender.PIPELINE as PipelineAppender;
-    registerFrontendListener('frontendLogging', (_event, _windowId, logEvent: ILogEvent) => {
+    onFromRenderer('frontendLogging', (_event, _windowId, logEvent: ILogEvent) => {
       if (logEvent != null) {
         pipeline.handleFrontendEvent(logEvent);
       }

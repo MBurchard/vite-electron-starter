@@ -8,14 +8,14 @@
  * @author Martin Burchard
  */
 import type {BrowserWindowConstructorOptions} from 'electron';
-import type {FrontendIpcListener} from './ipc.js';
+import type {RendererListener} from './ipc.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import {fileURLToPath} from 'node:url';
 import {app, BrowserWindow} from 'electron';
 import {v4 as uuidv4} from 'uuid';
-import {registerFrontendListener, unregisterFrontendListener} from './ipc.js';
+import {offFromRenderer, onceFromRenderer, registerWindow} from './ipc.js';
 import {getLogger} from './logging/index.js';
 
 const log = getLogger('WindowManager');
@@ -63,13 +63,15 @@ export async function createWindow(conf: WindowConfiguration): Promise<BrowserWi
       },
     });
 
-    const windowFullyLoadedListener: FrontendIpcListener = (_event, windowId) => {
+    registerWindow(windowId, win);
+
+    const windowFullyLoadedListener: RendererListener = (_event, windowId) => {
       const endTS = Date.now();
       log.debug(`Window '${conf.contentPage}' has been opened in ${endTS - startTS}ms`);
-      unregisterFrontendListener(`windowFullyLoaded-${windowId}`, windowFullyLoadedListener);
+      offFromRenderer(`windowFullyLoaded-${windowId}`, windowFullyLoadedListener);
     };
 
-    registerFrontendListener(`windowFullyLoaded-${windowId}`, windowFullyLoadedListener, true);
+    onceFromRenderer(`windowFullyLoaded-${windowId}`, windowFullyLoadedListener);
 
     log.debug('Environment:', ENV);
     log.debug('VITE_DEV_SERVER_URL:', process.env.VITE_DEV_SERVER_URL);
