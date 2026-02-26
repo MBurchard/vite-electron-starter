@@ -21,7 +21,7 @@ const {backend} = window;
  */
 function showDisplayDemo() {
   log.debug('show display demo');
-  backend.emit('showDisplayDemo');
+  backend.send('showDisplayDemo');
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -51,11 +51,4 @@ window.addEventListener('DOMContentLoaded', async () => {
     </p>
   </div>`;
   document.querySelector<HTMLButtonElement>('#displayDemoBtn')?.addEventListener('click', showDisplayDemo);
-
-  // TODO: remove test error after source map resolver testing
-  try {
-    throw new Error('Test error from frontend index.ts');
-  } catch (e) {
-    log.error('Caught test error:', e);
-  }
 });

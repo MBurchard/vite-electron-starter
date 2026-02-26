@@ -30,11 +30,12 @@ virtual modules and injects template variables. Currently, it includes: the main
 
 ### Type-Safe IPC
 
-Three communication patterns over typed `IpcChannels`:
+Four communication patterns over typed `IpcChannels`:
 
-- **Request-Response** (`invoke`): Frontend asks, the main process answers
-- **One-Way Send** (`emit`): Frontend sends it, the main process reacts
-- **Broadcast** (`sendFrontend`): The main process sends it to all windows
+- **Request-Response** (`invoke`/`handleFromRenderer`): Frontend asks, the main process answers
+- **Fire-and-Forget** (`send`/`onFromRenderer`): Frontend sends, the main process reacts
+- **Broadcast** (`broadcast`): The main process sends to all renderer windows
+- **Targeted Send** (`sendToRenderer`): The main process sends to a specific renderer window
 
 The preload script exposes a minimal `window.backend` API via `contextBridge`, keeping the renderer fully sandboxed.
 

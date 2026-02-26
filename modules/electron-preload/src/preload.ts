@@ -2,7 +2,7 @@
  * modules/electron-preload/src/preload.ts
  *
  * @file Preload script that bridges the isolated renderer context with the Electron main process. Exposes a typed
- * `window.backend` API via contextBridge for IPC communication (invoke, emit, on/off) and log forwarding.
+ * `window.backend` API via contextBridge for IPC communication (invoke, send, on/once/off) and log forwarding.
  *
  * @author Martin Burchard
  */
@@ -23,6 +23,7 @@ function getWindowId(): string | undefined {
   // It's already declared within the preload environment
   // eslint-disable-next-line node/prefer-global/process
   const windowIdArg = process.argv.find(arg => arg.startsWith('--window-id?'));
+  /* v8 ignore next @preserve */
   return windowIdArg ? windowIdArg.split('?')[1] : undefined;
 }
 
@@ -43,7 +44,7 @@ async function invoke<T>(channel: IpcChannel, ...args: any[]): Promise<T> {
  * @param channel - The IPC channel to send on.
  * @param args - Additional arguments to pass.
  */
-function emit(channel: IpcChannel, ...args: any[]): void {
+function send(channel: IpcChannel, ...args: any[]): void {
   ipcRenderer.send(channel, getWindowId(), ...args);
 }
 
@@ -62,6 +63,18 @@ function on<T extends any[]>(channel: IpcChannel, callback: (...args: T) => void
   }
   backendListeners.get(channel)?.set(callback, listener);
   ipcRenderer.on(channel, listener);
+}
+
+/**
+ * Listen for a single update from the Electron main process. The listener is automatically removed after the
+ * first invocation.
+ *
+ * @param channel - The IPC channel to listen on.
+ * @param callback - Callback function that receives multiple arguments.
+ */
+function once<T extends any[]>(channel: IpcChannel, callback: (...args: T) => void): void {
+  const listener = (_event: Electron.IpcRendererEvent, ...args: T) => callback(...args);
+  ipcRenderer.once(channel, listener);
 }
 
 /**
@@ -85,25 +98,27 @@ function off<T extends any[]>(channel: IpcChannel, callback: (...args: T) => voi
  * Typed interface for the backend bridge exposed to the renderer via contextBridge.
  */
 export interface Backend {
-  emit: (channel: IpcChannel, ...args: any[]) => void;
   forwardLogEvent: (event: ILogEvent) => void;
   getVersions: () => Promise<Versions>;
   invoke: <T>(channel: IpcChannel, ...args: any[]) => Promise<T>;
-  on: <T extends any[]>(channel: IpcChannel, callback: (...args: T) => void) => void;
   off: <T extends any[]>(channel: IpcChannel, callback: (...args: T) => void) => void;
+  on: <T extends any[]>(channel: IpcChannel, callback: (...args: T) => void) => void;
+  once: <T extends any[]>(channel: IpcChannel, callback: (...args: T) => void) => void;
+  send: (channel: IpcChannel, ...args: any[]) => void;
 }
 
 const backend: Backend = {
-  emit,
   forwardLogEvent: (event: ILogEvent) => {
-    emit(IpcChannels.frontendLogging, event);
+    send(IpcChannels.frontendLogging, event);
   },
   getVersions: async () => {
     return invoke(IpcChannels.getVersions);
   },
   invoke,
-  on,
   off,
+  on,
+  once,
+  send,
 };
 
 declare global {
@@ -116,7 +131,7 @@ declare global {
 contextBridge.exposeInMainWorld('backend', backend);
 
 window.addEventListener('DOMContentLoaded', () => {
-  emit(`windowFullyLoaded-${getWindowId()}`);
+  send(`windowFullyLoaded-${getWindowId()}`);
 });
 
 log.debug('Preload JS finished');
