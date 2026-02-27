@@ -232,6 +232,7 @@ export class WindowController {
       return;
     }
     this.visibleLogged = true;
+    clearTimeout(this.showTimeout);
     log.debug(`Window '${this.contentPage}' (${this.windowId}) visible after ${Date.now() - this.createdAt}ms`);
   }
 

@@ -46,6 +46,8 @@ and flexible placement. The backend owns all close decisions; the renderer only 
 
 Lifecycle hooks (`onOpened`, `onShown`, `onAction`, `onClosed`) allow callers to react to dialogue state transitions.
 
+See the [Dialog System API Reference](documentation/dialog-system.md) for detailed usage and configuration options.
+
 ### Type-Safe IPC
 
 Four communication patterns over typed `IpcChannels`:
