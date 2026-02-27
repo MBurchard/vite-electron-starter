@@ -1,0 +1,57 @@
+/*
+ * Shared button styles. Uses --btn-accent and --btn-secondary-bg for theming; defaults are set
+ * in template_root.css. Dialog windows override these per dialog type.
+ */
+
+.btn {
+  border: none;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1em;
+  font-weight: 500;
+  padding: 5px 16px;
+  transition: box-shadow 0.1s, transform 0.1s;
+
+  &:active {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    transform: translateY(1px);
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--btn-accent);
+    outline-offset: 2px;
+  }
+}
+
+.btn-primary {
+  background: var(--btn-accent);
+  color: #fff;
+
+  &:hover {
+    filter: brightness(1.15);
+  }
+
+  &:active {
+    filter: brightness(0.9);
+  }
+}
+
+.btn-secondary {
+  background: var(--btn-secondary-bg);
+  border: 1px solid var(--btn-accent);
+  color: var(--btn-accent);
+
+  &:hover {
+    filter: brightness(0.92);
+  }
+
+  &:active {
+    filter: brightness(0.85);
+  }
+}

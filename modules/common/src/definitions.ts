@@ -1,44 +1,35 @@
 /**
  * modules/common/src/definitions.ts
  *
- * @file Shared type definitions and IPC channel constants used by both the Electron main process and the renderer.
+ * @file Shared exports for backward compatibility. Prefer importing from dedicated submodules:
+ * - @common/core/*
+ * - @common/dialog/*
+ * - @common/demo/*
  *
  * @author Martin Burchard
  */
 
-/**
- * Extended display information including a flag indicating the primary display.
- */
-export interface Display extends Electron.Display {
-  primary: boolean;
-}
+import {CoreIpcChannels} from './core/ipc.js';
+import {IpcDemoChannels} from './demo/ipc.js';
+import {DialogIpcChannels} from './dialog/ipc.js';
+
+export * from './core/ipc.js';
+export * from './core/versions.js';
+export * from './core/window.js';
+export * from './dialog/ipc.js';
+export * from './dialog/lifecycle.js';
+export * from './dialog/types.js';
 
 /**
- * All IPC channel identifiers as a lookup object. Provides clean typing, code completion, and avoids typos.
+ * Combined core+dialog channel lookup kept for backward compatibility.
  */
 export const IpcChannels = {
-  // logs messages from the frontend to the backend
-  frontendLogging: 'frontendLogging',
-  // request display data from the backend
-  getDisplayData: 'getDisplayData',
-  // Request version information (Electron, Node.js, Chrome).
-  getVersions: 'getVersions',
-  // Trigger the opening of the display demo window.
-  showDisplayDemo: 'showDisplayDemo',
-  // Sends updated display data from the backend to the frontend.
-  updateDisplayData: 'updateDisplayData',
+  ...CoreIpcChannels,
+  ...DialogIpcChannels,
+  ...IpcDemoChannels,
 } as const;
 
 /**
- * Union of all predefined IPC channel names, plus any arbitrary string for extensibility.
+ * Union of all predefined core/dialog/demo channel names, plus any arbitrary string for extensibility.
  */
 export type IpcChannel = typeof IpcChannels[keyof typeof IpcChannels] | (string & {});
-
-/**
- * Version information for the Electron runtime components.
- */
-export interface Versions {
-  chrome: string;
-  electron: string;
-  node: string;
-}

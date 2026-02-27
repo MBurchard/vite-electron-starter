@@ -26,7 +26,25 @@ no hidden "black magic" in third-party plugins.
 ### Multi-Page Support
 
 Multiple windows with independent entry points, configured via `project.config.ts`. A custom Vite plugin resolves
-virtual modules and injects template variables. Currently, it includes: the main window, display demo, and popup.
+virtual modules and injects template variables. Currently, it includes: the main window, a dialogue window, and the
+display demo.
+
+### Window Management
+
+The `WindowController` manages per-window state including pack mode (auto-sizing to content), placement within the
+display work area, and display-awareness for multi-monitor setups. Windows in pack mode use a `ResizeObserver` in the
+preload script to automatically report content size changes back to the main process, debounced at 50 ms.
+
+A deferred `whenWindowReady` promise provides a clean lifecycle hook for post-load operations like pushing dialogue
+configuration.
+
+### Dialog System
+
+A built-in dialogue system replaces native Electron dialogues with fully styled, configurable windows. Dialogues support five
+visual types (confirm, error, info, success, warning), configurable buttons with variants (primary, secondary, danger),
+and flexible placement. The backend owns all close decisions; the renderer only sends intents.
+
+Lifecycle hooks (`onOpened`, `onShown`, `onAction`, `onClosed`) allow callers to react to dialogue state transitions.
 
 ### Type-Safe IPC
 
@@ -46,7 +64,8 @@ Context Isolation, Sandbox, and strict CSP are enabled by default. Node Integrat
 ### Logging
 
 Production-ready logging powered by [bit-log](https://github.com/MBurchard/bit-log), with source map support for both
-the main process and renderer.
+the main process and renderer. The preload script has its own logging pipeline that forwards events to the backend via a
+shared `BackendForwardingAppender`.
 
 Coloured console output with timestamps, log levels, logger names, and resolved TypeScript source locations:
 
@@ -63,3 +82,8 @@ with origin prefixes (`Backend :` / `Frontend:`).
 Inline source maps are deliberately included in production builds. The small size overhead is well worth it: log files
 show the original TypeScript file names and line numbers, making it much easier to locate and fix issues in deployed
 applications.
+
+### Core/Demo Separation
+
+All demo code lives in `demo/` subdirectories within each module and can be deleted for a clean starter. Core
+functionality (window management, dialogue system, IPC, logging) is fully independent of the demo code.

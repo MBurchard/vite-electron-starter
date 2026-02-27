@@ -5,18 +5,21 @@ export const viteElectronConfig: ViteElectronConfig = {
   app: {
     root: 'modules/app',
     pages: {
-      displayDemo: {
-        modules: ['src/displayDemo.ts'],
-        title: 'Display Demo',
-      },
+      // ---- Core Pages ----
       main: {
+        devTools: true,
         modules: ['src/index.ts'],
         title: `${process.env.VITE_APP_TITLE ?? 'Vite-Electron-Starter'} - Version: ${process.env.npm_package_version}`,
       },
-      popup: {
-        modules: ['src/popup.ts'],
-        template: 'popup.html',
-        title: 'My PopUp Title',
+      dialog: {
+        modules: ['src/dialog.ts'],
+        template: 'dialog.html',
+        title: 'Dialog',
+      },
+      // ---- Demo Pages (remove for clean starter) ----
+      displayDemo: {
+        modules: ['src/demo/displayDemo.ts'],
+        title: 'Display Demo',
       },
     },
   },
