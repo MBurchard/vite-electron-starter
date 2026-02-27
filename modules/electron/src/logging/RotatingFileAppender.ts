@@ -79,10 +79,7 @@ export class RotatingFileAppender extends AbstractBaseAppender {
    *
    * @param event - The log event to handle.
    */
-  async handle(event: ILogEvent): Promise<void> {
-    if (!this.willHandle(event)) {
-      return;
-    }
+  async doHandle(event: ILogEvent): Promise<void> {
     const pending = this.logQueue.then(() => this.processEvent(event));
     /* v8 ignore next 3 -- queue error handler; processEvent has its own error handling @preserve */
     this.logQueue = pending.catch((err) => {

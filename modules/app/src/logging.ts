@@ -7,7 +7,7 @@
  *
  * @author Martin Burchard
  */
-import {BackendForwardingAppender} from '@app/BackendForwardingAppender.js';
+import {createBoundAppenderClass} from '@common/logging/BackendForwardingAppender.js';
 import {originalPositionFor, TraceMap} from '@jridgewell/trace-mapping';
 import {configureLogging, configureSourceMapResolver, useLog} from '@mburchard/bit-log';
 import {ConsoleAppender} from '@mburchard/bit-log/appender/ConsoleAppender';
@@ -20,7 +20,7 @@ configureLogging({
       Class: ConsoleAppender,
     },
     BACKEND: {
-      Class: BackendForwardingAppender,
+      Class: createBoundAppenderClass(event => window.backend.forwardLogEvent(event)),
     },
   },
   root: {

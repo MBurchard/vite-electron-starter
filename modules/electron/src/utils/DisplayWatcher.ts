@@ -6,7 +6,7 @@
  *
  * @author Martin Burchard
  */
-import type {Display} from '@common/definitions.js';
+import type {Display} from '@common/core/window.js';
 import {EventEmitter} from 'node:events';
 import {app, screen} from 'electron';
 import {getLogger} from '../logging/index.js';

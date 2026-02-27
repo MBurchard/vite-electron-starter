@@ -1,0 +1,113 @@
+/*
+ * Dialog layout and styling for frameless transparent dialog windows. Provides structure, spacing,
+ * typography, and a Tailwind-aligned colour scheme. Override the CSS custom properties in
+ * template_root.css or your own theme to customise the appearance.
+ */
+
+html:has(> body.dialog) {
+  background: transparent !important;
+  color-scheme: normal !important;
+}
+
+body {
+  &.dialog {
+    background: transparent;
+    overflow: hidden;
+    /* Transparent gap so border-radius renders cleanly at the window edge (macOS) */
+    padding: 2px;
+    user-select: none;
+
+    &.info {
+      --dialog-bg: var(--dialog-bg-info);
+      --dialog-border: var(--dialog-border-info);
+      --dialog-accent: var(--dialog-accent-info);
+      --btn-accent: var(--dialog-accent-info);
+      --btn-secondary-bg: var(--dialog-btn-secondary-bg-info);
+    }
+
+    &.warning {
+      --dialog-bg: var(--dialog-bg-warning);
+      --dialog-border: var(--dialog-border-warning);
+      --dialog-accent: var(--dialog-accent-warning);
+      --btn-accent: var(--dialog-accent-warning);
+      --btn-secondary-bg: var(--dialog-btn-secondary-bg-warning);
+    }
+
+    &.error {
+      --dialog-bg: var(--dialog-bg-error);
+      --dialog-border: var(--dialog-border-error);
+      --dialog-accent: var(--dialog-accent-error);
+      --btn-accent: var(--dialog-accent-error);
+      --btn-secondary-bg: var(--dialog-btn-secondary-bg-error);
+    }
+
+    &.confirm {
+      --dialog-bg: var(--dialog-bg-confirm);
+      --dialog-border: var(--dialog-border-confirm);
+      --dialog-accent: var(--dialog-accent-confirm);
+      --btn-accent: var(--dialog-accent-confirm);
+      --btn-secondary-bg: var(--dialog-btn-secondary-bg-confirm);
+    }
+
+    &.success {
+      --dialog-bg: var(--dialog-bg-success);
+      --dialog-border: var(--dialog-border-success);
+      --dialog-accent: var(--dialog-accent-success);
+      --btn-accent: var(--dialog-accent-success);
+      --btn-secondary-bg: var(--dialog-btn-secondary-bg-success);
+    }
+
+    .container {
+      background: var(--dialog-bg);
+      border: 2px solid var(--dialog-border);
+      border-radius: 8px;
+      box-sizing: border-box;
+      color: var(--dialog-accent);
+    }
+
+    .dialog-header {
+      align-items: center;
+      border-bottom: 1px solid var(--dialog-border);
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 12px 8px;
+    }
+
+    .dialog-title {
+      font-weight: 600;
+    }
+
+    .dialog-close {
+      background: none;
+      border: none;
+      border-radius: 4px;
+      color: inherit;
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+      padding: 2px 6px;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.08);
+      }
+    }
+
+    .dialog-body {
+      padding: 10px 12px;
+    }
+
+    .dialog-message {
+      font-size: 1em;
+      line-height: 1.45;
+      white-space: pre-line;
+    }
+
+    .dialog-footer {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      padding: 4px 12px 10px;
+    }
+
+  }
+}

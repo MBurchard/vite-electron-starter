@@ -7,12 +7,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title><%= PAGE_TITLE %></title>
 </head>
-<body class="<%= PAGE %>">
+<body class="dialog">
   <div class="container">
-    <p>
-      <label>Test:</label> <span id="test"></span>
-    </p>
-    <p>This is the popup page</p>
+    <div class="dialog-header">
+      <div class="dialog-title"></div>
+      <button class="dialog-close">&times;</button>
+    </div>
+    <div class="dialog-body">
+      <div class="dialog-message"></div>
+    </div>
+    <div class="dialog-footer"></div>
   </div>
 </body>
 </html>

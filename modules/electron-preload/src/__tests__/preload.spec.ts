@@ -2,12 +2,13 @@
  * modules/electron-preload/src/__tests__/preload.spec.ts
  *
  * @file Tests for the preload bridge covering window ID injection, invoke/send argument forwarding,
- * on/off listener management via WeakMap, once without WeakMap, and convenience wrappers.
+ * on/off listener management via WeakMap, once without WeakMap, convenience wrappers, and the WindowAPI.
  */
 // @vitest-environment jsdom
 /// <reference lib="dom" />
 import type {Backend} from '../preload.js';
-import {afterAll, beforeEach, describe, expect, it, vi} from 'vitest';
+import {CoreIpcChannels} from '@common/core/ipc.js';
+import {afterAll, afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const TEST_WINDOW_ID = 'test-window-abc-123';
 
@@ -22,6 +23,54 @@ const mocks = vi.hoisted(() => ({
   exposeInMainWorld: vi.fn(),
   debug: vi.fn(),
 }));
+
+const resizeObserverCtrl = vi.hoisted(() => {
+  type Callback = (...args: any[]) => void;
+  const instances: Array<{callback: Callback; targets: Set<Element>}> = [];
+
+  class MockResizeObserver {
+    callback: Callback;
+    targets = new Set<Element>();
+
+    constructor(callback: Callback) {
+      this.callback = callback;
+      instances.push(this);
+    }
+
+    observe(target: Element) {
+      this.targets.add(target);
+    }
+
+    disconnect() {
+      this.targets.clear();
+      const idx = instances.indexOf(this);
+      if (idx !== -1) {
+        instances.splice(idx, 1);
+      }
+    }
+
+    unobserve(target: Element) {
+      this.targets.delete(target);
+    }
+  }
+
+  return {
+    MockResizeObserver,
+    instances,
+    /**
+     * Simulate a resize on all active observers.
+     */
+    trigger: () => {
+      for (const inst of instances) {
+        if (inst.targets.size > 0) {
+          inst.callback([], inst);
+        }
+      }
+    },
+  };
+});
+
+globalThis.ResizeObserver = resizeObserverCtrl.MockResizeObserver as any;
 
 vi.mock('electron', () => ({
   contextBridge: {
@@ -38,12 +87,21 @@ vi.mock('electron', () => ({
 
 // noinspection JSUnusedGlobalSymbols
 vi.mock('@mburchard/bit-log', () => ({
+  configureLogging: vi.fn(),
   useLog: () => ({debug: mocks.debug}),
+}));
+
+vi.mock('@mburchard/bit-log/appender/ConsoleAppender', () => ({
+  ConsoleAppender: class {},
+}));
+
+vi.mock('@common/logging/BackendForwardingAppender.js', () => ({
+  createBoundAppenderClass: () => class {},
 }));
 
 // ---- Module import (triggers side effects) ----
 
-process.argv.push(`--window-id?${TEST_WINDOW_ID}`);
+process.argv.push(`--window-id?${TEST_WINDOW_ID}`, '--auto-resize');
 await import('../preload.js');
 
 /**
@@ -64,9 +122,11 @@ function getCapturedBackend(): Backend {
 const backend = getCapturedBackend();
 
 afterAll(() => {
-  const idx = process.argv.indexOf(`--window-id?${TEST_WINDOW_ID}`);
-  if (idx !== -1) {
-    process.argv.splice(idx, 1);
+  for (const arg of [`--window-id?${TEST_WINDOW_ID}`, '--auto-resize']) {
+    const idx = process.argv.indexOf(arg);
+    if (idx !== -1) {
+      process.argv.splice(idx, 1);
+    }
   }
 });
 
@@ -89,6 +149,7 @@ describe('preload', () => {
       expect(typeof backend.off).toBe('function');
       expect(typeof backend.forwardLogEvent).toBe('function');
       expect(typeof backend.getVersions).toBe('function');
+      expect(backend.window).toBeDefined();
     });
   });
 
@@ -219,12 +280,83 @@ describe('preload', () => {
     });
   });
 
-  // ---- DOMContentLoaded side effect ----
+  // ---- WindowAPI ----
 
-  describe('domContentLoaded', () => {
-    it('should send windowFullyLoaded with the window ID on DOMContentLoaded', () => {
+  describe('backend.window', () => {
+    it('should have all expected methods', () => {
+      const win = backend.window;
+      expect(typeof win.reportContentSize).toBe('function');
+      expect(typeof win.enableAutoResize).toBe('function');
+      expect(typeof win.disableAutoResize).toBe('function');
+    });
+
+    it('should send rendererContentSizeChanged with width, height and windowId', () => {
+      backend.window.reportContentSize(400, 300);
+      expect(mocks.send).toHaveBeenCalledWith(CoreIpcChannels.rendererContentSizeChanged, TEST_WINDOW_ID, 400, 300);
+    });
+  });
+
+  // ---- Auto-Resize Observer ----
+
+  describe('autoResize', () => {
+    afterEach(() => {
+      backend.window.disableAutoResize();
+      vi.useRealTimers();
+    });
+
+    it('should start observing on DOMContentLoaded', () => {
+      vi.useFakeTimers();
+
+      // jsdom does not auto-fire DOMContentLoaded; the {once:true} listener is still pending
       window.dispatchEvent(new Event('DOMContentLoaded'));
-      expect(mocks.send).toHaveBeenCalledWith(`windowFullyLoaded-${TEST_WINDOW_ID}`, TEST_WINDOW_ID);
+
+      resizeObserverCtrl.trigger();
+      vi.advanceTimersByTime(50);
+
+      expect(mocks.send).toHaveBeenCalledWith(
+        CoreIpcChannels.rendererContentSizeChanged,
+        TEST_WINDOW_ID,
+        document.body.offsetWidth,
+        document.body.offsetHeight,
+      );
+    });
+
+    it('should stop reporting after disableAutoResize()', () => {
+      vi.useFakeTimers();
+      backend.window.enableAutoResize();
+      backend.window.disableAutoResize();
+
+      resizeObserverCtrl.trigger();
+      vi.advanceTimersByTime(50);
+
+      expect(mocks.send).not.toHaveBeenCalled();
+    });
+
+    it('should resume reporting after enableAutoResize()', () => {
+      vi.useFakeTimers();
+      backend.window.enableAutoResize();
+
+      resizeObserverCtrl.trigger();
+      vi.advanceTimersByTime(50);
+
+      expect(mocks.send).toHaveBeenCalledWith(
+        CoreIpcChannels.rendererContentSizeChanged,
+        TEST_WINDOW_ID,
+        document.body.offsetWidth,
+        document.body.offsetHeight,
+      );
+    });
+
+    it('enableAutoResize() should be idempotent', () => {
+      backend.window.enableAutoResize();
+      backend.window.enableAutoResize();
+      expect(resizeObserverCtrl.instances).toHaveLength(1);
+    });
+
+    it('disableAutoResize() should be idempotent', () => {
+      backend.window.disableAutoResize();
+      backend.window.disableAutoResize();
+      expect(resizeObserverCtrl.instances).toHaveLength(0);
     });
   });
 });

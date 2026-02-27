@@ -1,35 +1,24 @@
+import type {Versions} from '@common/core/versions.js';
+import process from 'node:process';
 /**
  * modules/electron/src/main.ts
  *
- * @file Electron main process entry point. Sets up IPC handlers for display data and version info, creates the main
- * application window, and wires up the display demo window lifecycle.
+ * @file Electron main process entry point. Sets up IPC handlers for display data, version info, and the dialog
+ * system, creates the main application window, and wires up demo window lifecycle via demo handlers.
  *
  * @author Martin Burchard
  */
-import type {Display, Versions} from '@common/definitions.js';
-import type {BrowserWindow} from 'electron';
-import process from 'node:process';
-import {IpcChannels} from '@common/definitions.js';
+import {CoreIpcChannels} from '@common/core/ipc.js';
 import {app} from 'electron';
-import {broadcast, handleFromRenderer, onFromRenderer} from './ipc.js';
+import {registerDisplayDemoHandlers} from './demo/displayDemo.js';
+import {handleFromRenderer} from './ipc.js';
 import {getLogger} from './logging/index.js';
-import {DISPLAY_WATCHER} from './utils/DisplayWatcher.js';
-import {createWindow} from './WindowManager.js';
+import {createWindow} from './windowMgt/WindowManager.js';
 
 const log = getLogger('electron.main');
 
-app.whenReady().then(async () => {
-  let mainWindow: BrowserWindow | undefined;
-
-  handleFromRenderer(IpcChannels.getDisplayData, (): Display[] => {
-    return DISPLAY_WATCHER.getDisplays();
-  });
-
-  DISPLAY_WATCHER.on('update', (displays: Display[]) => {
-    broadcast(IpcChannels.updateDisplayData, displays);
-  });
-
-  handleFromRenderer(IpcChannels.getVersions, (): Versions => {
+app.whenReady().then(() => {
+  handleFromRenderer(CoreIpcChannels.getVersions, (): Versions => {
     return {
       chrome: process.versions.chrome,
       electron: process.versions.electron,
@@ -37,40 +26,24 @@ app.whenReady().then(async () => {
     };
   });
 
-  onFromRenderer(IpcChannels.showDisplayDemo, async () => {
-    try {
-      log.debug('show display demo');
-      const displayDemoWindow = await createWindow({
-        contentPage: 'displayDemo',
-        windowOptions: {
-          height: 768,
-          width: 1024,
-        },
-        withDevTools: true,
-      });
-      if (mainWindow) {
-        mainWindow.hide();
-      }
+  // ---- Main Window ----
 
-      displayDemoWindow?.on('closed', () => {
-        log.debug('Display demo closed, showing main window');
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.show();
-        }
-      });
-    } catch (e) {
-      log.error('error during show display demo', e);
-    }
-  });
-
-  mainWindow = await createWindow({
+  const mainController = createWindow({
     contentPage: 'main',
     windowOptions: {
       height: 768,
       width: 1024,
     },
-    withDevTools: true,
   });
 
-  log.debug('Electron app is ready');
+  if (!mainController) {
+    throw new Error('Main window could not be created');
+  }
+
+  mainController.whenWindowReady.then(() => {
+    registerDisplayDemoHandlers(mainController.browserWindow);
+    log.debug('Electron app is ready');
+  }).catch((reason) => {
+    log.error('Main window failed to load:', reason);
+  });
 }).catch(reason => log.error('error during electron app ready:', reason));

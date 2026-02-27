@@ -1,18 +1,21 @@
 /**
  * modules/electron-preload/src/preload.ts
  *
- * @file Preload script that bridges the isolated renderer context with the Electron main process. Exposes a typed
- * `window.backend` API via contextBridge for IPC communication (invoke, send, on/once/off) and log forwarding.
+ * @file Preload script that bridges the isolated renderer context with the Electron main process. Configures
+ * logging with backend forwarding, exposes a typed `window.backend` API via contextBridge for IPC communication
+ * (invoke, send, on/once/off), and manages an optional ResizeObserver for automatic content-size reporting.
  *
  * @author Martin Burchard
  */
-import type {IpcChannel, Versions} from '@common/definitions.js';
+import type {Versions} from '@common/core/versions.js';
+import type {IpcChannel} from '@common/definitions.js';
 import type {ILogEvent} from '@mburchard/bit-log/definitions';
-import {IpcChannels} from '@common/definitions.js';
-import {useLog} from '@mburchard/bit-log';
+import {CoreIpcChannels} from '@common/core/ipc.js';
+import {createBoundAppenderClass} from '@common/logging/BackendForwardingAppender.js';
+import {debounce} from '@common/utils.js';
+import {configureLogging, useLog} from '@mburchard/bit-log';
+import {ConsoleAppender} from '@mburchard/bit-log/appender/ConsoleAppender';
 import {contextBridge, ipcRenderer} from 'electron';
-
-const log = useLog('electron.preload');
 
 /**
  * Extract the window ID from the process argv injected by the WindowManager.
@@ -47,6 +50,29 @@ async function invoke<T>(channel: IpcChannel, ...args: any[]): Promise<T> {
 function send(channel: IpcChannel, ...args: any[]): void {
   ipcRenderer.send(channel, getWindowId(), ...args);
 }
+
+// ---- Logging ----
+
+configureLogging({
+  appender: {
+    CONSOLE: {
+      Class: ConsoleAppender,
+    },
+    BACKEND: {
+      Class: createBoundAppenderClass(event => send(CoreIpcChannels.frontendLogging, event)),
+    },
+  },
+  root: {
+    appender: ['CONSOLE', 'BACKEND'],
+    includeCallSite: true,
+    level: 'DEBUG',
+  },
+});
+
+const log = useLog('electron.preload');
+const windowId = getWindowId() ?? 'unknown';
+
+// ---- IPC Listener Management ----
 
 const backendListeners = new Map<IpcChannel, WeakMap<(...args: any[]) => void, (...args: any[]) => void>>();
 
@@ -94,6 +120,43 @@ function off<T extends any[]>(channel: IpcChannel, callback: (...args: T) => voi
   }
 }
 
+// ---- Auto-Resize Observer ----
+
+const debouncedReportSize = debounce(() => {
+  const w = document.body.offsetWidth;
+  const h = document.body.offsetHeight;
+  log.debug(`(${windowId}) Auto-resize fired: ${w}x${h}`);
+  send(CoreIpcChannels.rendererContentSizeChanged, w, h);
+}, 50);
+
+let resizeObserver: ResizeObserver | undefined;
+
+// ---- Backend API ----
+
+/**
+ * Typed API for per-window operations exposed as `backend.window`.
+ */
+export interface WindowAPI {
+  /**
+   * Disable the automatic content-size observer. Pending debounced reports are cancelled.
+   */
+  disableAutoResize: () => void;
+
+  /**
+   * Enable the automatic content-size observer. A ResizeObserver on `document.body` reports size changes to the
+   * main process, debounced at 50ms. Enabled automatically for pack windows after DOMContentLoaded.
+   */
+  enableAutoResize: () => void;
+
+  /**
+   * Report the current content size to the main process immediately, bypassing the debounce.
+   *
+   * @param width - Content width in pixels.
+   * @param height - Content height in pixels.
+   */
+  reportContentSize: (width: number, height: number) => void;
+}
+
 /**
  * Typed interface for the backend bridge exposed to the renderer via contextBridge.
  */
@@ -105,20 +168,45 @@ export interface Backend {
   on: <T extends any[]>(channel: IpcChannel, callback: (...args: T) => void) => void;
   once: <T extends any[]>(channel: IpcChannel, callback: (...args: T) => void) => void;
   send: (channel: IpcChannel, ...args: any[]) => void;
+  window: WindowAPI;
 }
+
+const windowAPI: WindowAPI = {
+  disableAutoResize: () => {
+    if (!resizeObserver) {
+      return;
+    }
+    log.debug(`(${windowId}) Auto-resize observer disabled`);
+    debouncedReportSize.cancel();
+    resizeObserver.disconnect();
+    resizeObserver = undefined;
+  },
+  enableAutoResize: () => {
+    if (resizeObserver) {
+      return;
+    }
+    log.debug(`(${windowId}) Auto-resize observer enabled`);
+    resizeObserver = new ResizeObserver(debouncedReportSize);
+    resizeObserver.observe(document.body);
+  },
+  reportContentSize: (width: number, height: number) => {
+    send(CoreIpcChannels.rendererContentSizeChanged, width, height);
+  },
+};
 
 const backend: Backend = {
   forwardLogEvent: (event: ILogEvent) => {
-    send(IpcChannels.frontendLogging, event);
+    send(CoreIpcChannels.frontendLogging, event);
   },
   getVersions: async () => {
-    return invoke(IpcChannels.getVersions);
+    return invoke(CoreIpcChannels.getVersions);
   },
   invoke,
   off,
   on,
   once,
   send,
+  window: windowAPI,
 };
 
 declare global {
@@ -130,8 +218,9 @@ declare global {
 
 contextBridge.exposeInMainWorld('backend', backend);
 
-window.addEventListener('DOMContentLoaded', () => {
-  send(`windowFullyLoaded-${getWindowId()}`);
-});
+// eslint-disable-next-line node/prefer-global/process
+if (process.argv.includes('--auto-resize')) {
+  window.addEventListener('DOMContentLoaded', () => windowAPI.enableAutoResize(), {once: true});
+}
 
-log.debug('Preload JS finished');
+log.debug(`(${windowId}) Preload JS finished`);

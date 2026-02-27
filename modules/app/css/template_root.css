@@ -1,0 +1,65 @@
+/*
+ * Core theme variables and base resets. Override these in your own theme or framework
+ * (e.g. Tailwind CSS).
+ */
+
+*,
+*::before,
+*::after {
+  border: 0 solid;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+}
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --dialog-bg: #ffffff;
+  --dialog-bg-info: #eff6ff;
+  --dialog-bg-warning: #fff7ed;
+  --dialog-bg-error: #fef2f2;
+  --dialog-bg-confirm: #f3f4f6;
+  --dialog-bg-success: #f0fdf4;
+  --dialog-border: #d1d5db;
+  --dialog-border-info: #93c5fd;
+  --dialog-border-warning: #fdba74;
+  --dialog-border-error: #fca5a5;
+  --dialog-border-confirm: #d1d5db;
+  --dialog-border-success: #86efac;
+  --dialog-accent: #374151;
+  --dialog-accent-info: #1d4ed8;
+  --dialog-accent-warning: #ea580c;
+  --dialog-accent-error: #b91c1c;
+  --dialog-accent-confirm: #374151;
+  --dialog-accent-success: #16a34a;
+  --dialog-btn-secondary-bg-info: #dbeafe;
+  --dialog-btn-secondary-bg-warning: #ffedd5;
+  --dialog-btn-secondary-bg-error: #fee2e2;
+  --dialog-btn-secondary-bg-confirm: #e5e7eb;
+  --dialog-btn-secondary-bg-success: #dcfce7;
+  --btn-accent: #374151;
+  --btn-secondary-bg: #e5e7eb;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+}

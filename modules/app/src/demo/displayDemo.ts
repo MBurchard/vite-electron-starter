@@ -1,13 +1,14 @@
 /**
- * modules/app/src/displayDemo.ts
+ * modules/app/src/demo/displayDemo.ts
  *
  * @file Renderer entry point for the display demo window. Visualizes all connected displays with their work areas
- * and reacts to layout changes in real time.
+ * and reacts to layout changes in real time. Delete this file when using this project as a starter template.
  *
  * @author Martin Burchard
  */
-import type {Display} from '@common/definitions.js';
+import type {Display} from '@common/core/window.js';
 import {getLog} from '@app/logging.js';
+import {IpcDemoChannels} from '@common/demo/ipc.js';
 import '@css/style.css';
 
 const log = getLog('app.display.demo');
@@ -52,12 +53,30 @@ function createOverlayElement(
 }
 
 /**
- * Render the base HTML layout with the display container and instructions.
+ * Render the base HTML layout with the display container and startup demo button.
  */
 function renderBaseLayout() {
   document.querySelector('#app')!.innerHTML = `
   <div id="displays" class="displays"></div>
-  <div style="text-align: center">Try to double-click on the shown displays.</div>`;
+  <div class="dialog-buttons"></div>`;
+
+  const btnContainer = document.querySelector<HTMLDivElement>('.dialog-buttons')!;
+
+  const startupBtn = document.createElement('button');
+  startupBtn.className = 'btn btn-secondary';
+  startupBtn.textContent = 'Show Startup Dialog Demo';
+  startupBtn.addEventListener('click', () => {
+    backend.send(IpcDemoChannels.showStartupDialogDemo);
+  });
+  btnContainer.appendChild(startupBtn);
+
+  const dialogTypeBtn = document.createElement('button');
+  dialogTypeBtn.className = 'btn btn-secondary';
+  dialogTypeBtn.textContent = 'Show Dialog Types';
+  dialogTypeBtn.addEventListener('click', () => {
+    backend.send(IpcDemoChannels.showDialogTypeDemo);
+  });
+  btnContainer.appendChild(dialogTypeBtn);
 }
 
 /**
@@ -146,12 +165,16 @@ function visualizeDisplays(displays: Display[]) {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
-  renderBaseLayout();
+  try {
+    renderBaseLayout();
 
-  // initial display setup
-  const displayData = await backend.invoke<Display[]>('getDisplayData');
-  visualizeDisplays(displayData);
+    // initial display setup
+    const displayData = await backend.invoke<Display[]>(IpcDemoChannels.getDisplayData);
+    visualizeDisplays(displayData);
 
-  // react on display setup updates
-  backend.on<[Display[]]>('updateDisplayData', visualizeDisplays);
+    // react on display setup updates
+    backend.on<[Display[]]>(IpcDemoChannels.updateDisplayData, visualizeDisplays);
+  } catch (err) {
+    log.error('Display demo initialisation failed', err);
+  }
 });

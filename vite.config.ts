@@ -35,6 +35,10 @@ export default defineConfig(({command, mode}): UserConfig => {
     process.env.NODE_ENV = mode;
   }
   const minify = mode === 'production' && false; // will be changed later, when minification is really wanted
+  const pageDevTools = Object.fromEntries(
+    Object.entries(cfg.app.pages).map(([pageName, page]) => [pageName, page.devTools === true]),
+  );
+  const pageDevToolsJson = JSON.stringify(pageDevTools);
 
   log.info(`${Ansi.magenta(command === 'serve' ? 'Serving' : 'Building')} App Frontend`);
 
@@ -52,6 +56,9 @@ export default defineConfig(({command, mode}): UserConfig => {
   return {
     root: cfg.app.root,
     base: './',
+    define: {
+      'import.meta.env.VITE_APP_PAGE_DEVTOOLS': pageDevToolsJson,
+    },
     build: {
       emptyOutDir: true,
       minify,
@@ -83,7 +90,7 @@ export default defineConfig(({command, mode}): UserConfig => {
           });
         },
       },
-      vitePluginElectron(command),
+      vitePluginElectron(command, pageDevToolsJson),
     ],
     resolve: {
       alias: {
@@ -101,7 +108,7 @@ export default defineConfig(({command, mode}): UserConfig => {
   };
 });
 
-function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
+function vitePluginElectron(command: 'serve' | 'build', pageDevToolsJson: string): CustomPlugin {
   const electronPath = path.resolve(__dirname, cfg.electron.root, 'src');
   log.debug('Electron Path:', electronPath);
   const commonPath = path.resolve(__dirname, cfg.common.root, 'src');
@@ -117,6 +124,9 @@ function vitePluginElectron(command: 'serve' | 'build'): CustomPlugin {
       }
       build({
         root: cfg.electron.root,
+        define: {
+          'import.meta.env.VITE_APP_PAGE_DEVTOOLS': pageDevToolsJson,
+        },
         plugins: [
           vitePluginElectronPreload(command),
           vitePluginElectronHotReload(command),
