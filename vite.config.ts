@@ -1,3 +1,13 @@
+/**
+ * vite.config.ts
+ *
+ * @file Vite configuration with four custom plugins that orchestrate the full Electron build pipeline:
+ * multipage HTML resolution, Electron main process build, preload script compilation (CJS), and
+ * coordinated hot-reload during development. An EventEmitter synchronizes the build order, so Electron
+ * only starts once both the main process and preload builds have completed.
+ *
+ * @author Martin Burchard
+ */
 import type {ChildProcess} from 'node:child_process';
 import type {Plugin, PluginOption, UserConfig} from 'vite';
 import type {CustomPlugin, PageConfig} from './types/env.js';
@@ -13,6 +23,8 @@ import {ConsoleAppender} from '@mburchard/bit-log/appender/ConsoleAppender';
 import electronBinary from 'electron';
 import {build, defineConfig} from 'vite';
 import {viteElectronConfig as cfg} from './project.config.js';
+
+// ---- Logging ----
 
 configureLogging({
   appender: {
@@ -30,11 +42,13 @@ configureLogging({
 
 const log = useLog('vite.config', 'INFO');
 
+// ---- App Frontend Configuration ----
+
 export default defineConfig(({command, mode}): UserConfig => {
   if (!process.env.NODE_ENV) {
     process.env.NODE_ENV = mode;
   }
-  const minify = mode === 'production' && false; // will be changed later, when minification is really wanted
+  const minify = mode === 'production';
   const pageDevTools = Object.fromEntries(
     Object.entries(cfg.app.pages).map(([pageName, page]) => [pageName, page.devTools === true]),
   );
@@ -67,7 +81,7 @@ export default defineConfig(({command, mode}): UserConfig => {
       rollupOptions: {
         input: rollupInput,
       },
-      sourcemap: 'inline', // will decide later if we deploy without source maps
+      sourcemap: 'inline',
     },
     plugins: [
       vitePluginMultiPage(),
@@ -75,6 +89,9 @@ export default defineConfig(({command, mode}): UserConfig => {
         name: 'vite-plugin-dev-server-url',
         configureServer(server) {
           server.httpServer?.once('listening', () => {
+            /**
+             * Poll for the resolved dev server URL and store it in the environment.
+             */
             function checkServerURL() {
               const serverURL = server.resolvedUrls?.local[0];
               if (serverURL !== undefined) {
@@ -108,6 +125,16 @@ export default defineConfig(({command, mode}): UserConfig => {
   };
 });
 
+// ---- Electron Main Process Plugin ----
+
+/**
+ * Build the Electron main process as ESM with a preserved module structure. Nests the preload and hot-reload plugins
+ * as sub-plugins so the full backend pipeline runs within a single Vite build context.
+ *
+ * @param command - Vite command: 'serve' enables watch mode, 'build' produces a one-shot output.
+ * @param pageDevToolsJson - JSON string of per-page devTools flags injected as define constant.
+ * @returns A Vite plugin that triggers the Electron build inside its configResolved hook.
+ */
 function vitePluginElectron(command: 'serve' | 'build', pageDevToolsJson: string): CustomPlugin {
   const electronPath = path.resolve(__dirname, cfg.electron.root, 'src');
   log.debug('Electron Path:', electronPath);
@@ -197,12 +224,27 @@ function vitePluginElectron(command: 'serve' | 'build', pageDevToolsJson: string
   };
 }
 
+// ---- Electron Hot Reload Plugin ----
+
+/**
+ * Coordinate Electron process lifecycle during development. Waits for both the main process and preload builds to
+ * complete before spawning Electron and restarts it on later rebuilds. Registers SIGINT/SIGTERM handlers to
+ * ensure clean shutdown.
+ *
+ * @param command - Vite command: hot-reload logic only activates in 'serve' mode.
+ * @returns A Vite plugin that manages the Electron child process.
+ */
 function vitePluginElectronHotReload(command: 'serve' | 'build'): CustomPlugin {
   let electronApp: ChildProcess | null = null;
   let preloadPlugin: PluginOption | null | undefined = null;
   let electronBuildReady = false;
   let preloadBuildReady = false;
 
+  /**
+   * Handle Electron process exit by stopping the Vite dev server after a short delay.
+   *
+   * @param code - The exit code from the Electron process, or null if killed by signal.
+   */
   function cleanExit(code: number | null) {
     log.info('Electron has been stopped');
     setTimeout(() => {
@@ -211,7 +253,10 @@ function vitePluginElectronHotReload(command: 'serve' | 'build'): CustomPlugin {
     }, 500);
   }
 
-  function starteElectron() {
+  /**
+   * Spawn or restart the Electron process once both main and preload builds are ready.
+   */
+  function startElectron() {
     if (!electronBuildReady || !preloadBuildReady) {
       return;
     }
@@ -226,6 +271,9 @@ function vitePluginElectronHotReload(command: 'serve' | 'build'): CustomPlugin {
     electronApp.addListener('exit', cleanExit);
   }
 
+  /**
+   * Register process signal handlers to cleanly terminate the Electron child process on shutdown.
+   */
   function setupExitHandlers() {
     process.on('SIGINT', () => {
       if (electronApp) {
@@ -259,7 +307,7 @@ function vitePluginElectronHotReload(command: 'serve' | 'build'): CustomPlugin {
         preloadPlugin.api.onBuildEnd(() => {
           preloadBuildReady = true;
           if (command === 'serve') {
-            starteElectron();
+            startElectron();
           }
         });
       }
@@ -270,15 +318,24 @@ function vitePluginElectronHotReload(command: 'serve' | 'build'): CustomPlugin {
     buildEnd() {
       electronBuildReady = true;
       if (command === 'serve') {
-        starteElectron();
+        startElectron();
       }
     },
   };
 }
 
+// ---- Electron Preload Plugin ----
+
+/**
+ * Compile the preload script as a CommonJS bundle. Runs as a nested build inside the Electron plugin's closeBundle
+ * hook. In serve mode, sets up a file watcher and emits 'build_end' events consumed by the hot-reload plugin.
+ *
+ * @param command - Vite command: 'serve' enables watch mode with rebuild notifications.
+ * @returns A Vite plugin with an `api.onBuildEnd` callback for cross-plugin coordination.
+ */
 function vitePluginElectronPreload(command: 'serve' | 'build'): CustomPlugin {
   const eventEmitter = new EventEmitter();
-  let hasBeenBuild = false;
+  let hasBeenBuilt = false;
 
   const entryPoint = path.resolve(__dirname, cfg.preload.root, 'src', 'preload.ts');
 
@@ -323,7 +380,7 @@ function vitePluginElectronPreload(command: 'serve' | 'build'): CustomPlugin {
         if ('on' in watcher) {
           watcher.on('event', (event: any) => {
             if (event.code === 'BUNDLE_END') {
-              hasBeenBuild = true;
+              hasBeenBuilt = true;
               log.debug('Preload Script compiled and watching for changes');
               eventEmitter.emit('build_end');
             }
@@ -332,9 +389,14 @@ function vitePluginElectronPreload(command: 'serve' | 'build'): CustomPlugin {
       }
     },
     api: {
+      /**
+       * Register a callback that fires after each successful preload build.
+       *
+       * @param callback - Invoked once the preload bundle is ready.
+       */
       onBuildEnd(callback: () => void) {
         eventEmitter.on('build_end', callback);
-        if (hasBeenBuild) {
+        if (hasBeenBuilt) {
           callback();
         }
       },
@@ -342,9 +404,24 @@ function vitePluginElectronPreload(command: 'serve' | 'build'): CustomPlugin {
   };
 }
 
+// ---- Multi-Page Plugin ----
+
+/**
+ * Resolve virtual `virtual:page:NAME.html` modules to real HTML templates, inject script modules and template
+ * variables (`PAGE_TITLE`, `PAGE`). Supports both build mode (rollup input) and dev server (transformIndexHtml).
+ *
+ * @returns A Vite plugin handling multipage HTML resolution and transformation.
+ */
 function vitePluginMultiPage(): Plugin {
   const contextMap = new Map<string, PageConfig>();
 
+  /**
+   * Read an HTML template from disk and inject the page's script modules before `</body>`. In development mode,
+   * the Vite client script is also injected into `<head>`.
+   *
+   * @param pageConfig - The page configuration containing template path and module list.
+   * @returns The processed HTML string, or null if the template could not be loaded.
+   */
   function loadTemplate(pageConfig: PageConfig | undefined | null): string | null {
     const templatePath = pageConfig?.template ?
         path.resolve(__dirname, cfg.app.root, 'templates', pageConfig.template) :
