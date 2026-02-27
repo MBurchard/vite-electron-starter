@@ -1,8 +1,8 @@
 /**
  * modules/electron/src/windowMgt/dialog/DialogService.ts
  *
- * @file Backend-owned dialog lifecycle service. Stores per-dialog config/state, exposes openDialogWindow(), and
- * processes renderer intents (opened/shown/action/dismissed) to produce typed dialog results.
+ * @file Backend-owned dialogue lifecycle service. Stores per-dialogue config/state, exposes openDialogWindow(), and
+ * processes renderer intents (opened/shown/action/dismissed) to produce typed dialogue results.
  */
 
 import type {
@@ -15,7 +15,7 @@ import type {
   DialogConfig,
   DialogResult,
 } from '@common/dialog/types.js';
-import type {DialogHandle, DialogLifecycleHooks, OpenDialogWindowOptions} from './types.js';
+import type {DialogHandle, DialogLifecycleHooks, OpenDialogWindowOptions, SimpleDialogOptions} from './types.js';
 import {DialogIpcChannels} from '@common/dialog/ipc.js';
 import {v4 as uuidv4} from 'uuid';
 import {sendToRenderer} from '../../ipc.js';
@@ -34,7 +34,7 @@ interface Deferred<T> {
 }
 
 /**
- * Internal bookkeeping for a single dialog instance including its config, lifecycle state, and deferred promises.
+ * Internal bookkeeping for a single dialogue instance including its config, lifecycle state, and deferred promises.
  */
 interface DialogEntry {
   config: DialogConfig;
@@ -53,12 +53,12 @@ const dialogStore = new Map<string, DialogEntry>();
 // ---- Public API ----
 
 /**
- * Open a dialog window and return lifecycle/result handles.
+ * Open a dialogue window and return lifecycle/result handles.
  *
- * @param config - Full dialog configuration rendered by the dialog window.
+ * @param config - Full dialogue configuration rendered by the dialogue window.
  * @param hooks - Optional lifecycle hooks invoked for open/show/action/close events.
- * @param options - Optional window behaviour overrides for dialog creation.
- * @returns A dialog handle with lifecycle promises and a programmatic close method.
+ * @param options - Optional window behaviour overrides for dialogue creation.
+ * @returns A dialogue handle with lifecycle promises and a programmatic close method.
  */
 export function openDialogWindow(
   config: DialogConfig,
@@ -104,6 +104,7 @@ export function openDialogWindow(
     resolveResult(dialogId, 'window-destroyed');
   } else {
     const entry = dialogStore.get(dialogId);
+    /* v8 ignore next @preserve */
     if (entry) {
       entry.browserWindow = controller.browserWindow;
     }
@@ -113,7 +114,7 @@ export function openDialogWindow(
     controller.whenWindowReady.then(() => {
       sendToRenderer(dialogId, DialogIpcChannels.initDialog, config);
     }).catch((reason) => {
-      log.error('Error loading dialog window', reason);
+      log.error('Error loading dialogue window', reason);
       resolveResult(dialogId, 'window-destroyed');
     });
   }
@@ -129,19 +130,67 @@ export function openDialogWindow(
   };
 }
 
+// ---- Convenience Functions ----
+
 /**
- * Mark dialog as opened (renderer initialized).
+ * Show a simple informational dialogue with an OK button.
  *
- * @param windowId - Unique dialog window ID.
+ * @param title - Title displayed in the dialogue header.
+ * @param message - Optional body text.
+ * @param options - Optional overrides for width, placement, or close behaviour.
+ */
+export async function showInfo(title: string, message?: string, options?: SimpleDialogOptions): Promise<void> {
+  await showSimpleDialog('info', title, message, options);
+}
+
+/**
+ * Show a simple success dialogue with an OK button.
+ *
+ * @param title - Title displayed in the dialogue header.
+ * @param message - Optional body text.
+ * @param options - Optional overrides for width, placement, or close behaviour.
+ */
+export async function showSuccess(title: string, message?: string, options?: SimpleDialogOptions): Promise<void> {
+  await showSimpleDialog('success', title, message, options);
+}
+
+/**
+ * Show a simple warning dialogue with an OK button.
+ *
+ * @param title - Title displayed in the dialogue header.
+ * @param message - Optional body text.
+ * @param options - Optional overrides for width, placement, or close behaviour.
+ */
+export async function showWarning(title: string, message?: string, options?: SimpleDialogOptions): Promise<void> {
+  await showSimpleDialog('warning', title, message, options);
+}
+
+/**
+ * Show a simple error dialogue with an OK button.
+ *
+ * @param title - Title displayed in the dialogue header.
+ * @param message - Optional body text.
+ * @param options - Optional overrides for width, placement, or close behaviour.
+ */
+export async function showError(title: string, message?: string, options?: SimpleDialogOptions): Promise<void> {
+  await showSimpleDialog('error', title, message, options);
+}
+
+// ---- Lifecycle Handlers ----
+
+/**
+ * Mark the dialogue as opened (renderer initialized).
+ *
+ * @param windowId - Unique dialogue window ID.
  */
 export function markDialogOpened(windowId: string): void {
   resolveOpened(windowId);
 }
 
 /**
- * Mark dialog as shown (renderer completed first layout + pack report).
+ * Mark the dialogue as shown (renderer completed first layout and pack report).
  *
- * @param windowId - Unique dialog window ID.
+ * @param windowId - Unique dialogue window ID.
  */
 export function markDialogShown(windowId: string): void {
   resolveShown(windowId);
@@ -150,7 +199,7 @@ export function markDialogShown(windowId: string): void {
 /**
  * Handle button action from the renderer.
  *
- * @param windowId - Unique dialog window ID.
+ * @param windowId - Unique dialogue window ID.
  * @param buttonId - ID of the button that was pressed.
  * @param payload - Optional payload sent with the action.
  */
@@ -162,7 +211,7 @@ export function handleDialogAction(windowId: string, buttonId: string, payload?:
 
   const button = entry.config.buttons.find(candidate => candidate.id === buttonId);
   if (!button) {
-    log.warn(`Unknown dialog button '${buttonId}' for window '${windowId}'`);
+    log.warn(`Unknown dialogue button '${buttonId}' for window '${windowId}'`);
     return;
   }
 
@@ -182,8 +231,8 @@ export function handleDialogAction(windowId: string, buttonId: string, payload?:
 /**
  * Handle non-button dismiss requests from the renderer.
  *
- * @param windowId - Unique dialog window ID.
- * @param source - Dismiss source (`titlebar-x` or `esc`).
+ * @param windowId - Unique dialogue window ID.
+ * @param source - Dismiss cause (`titlebar-x` or `esc`).
  */
 export function handleDialogDismissed(
   windowId: string,
@@ -193,9 +242,9 @@ export function handleDialogDismissed(
 }
 
 /**
- * Update the dialog message and push it to the renderer.
+ * Update the dialogue message and push it to the renderer.
  *
- * @param windowId - Unique dialog window ID.
+ * @param windowId - Unique dialogue window ID.
  * @param message - Full message content to render.
  */
 export function setDialogMessage(windowId: string, message: string): void {
@@ -211,6 +260,33 @@ export function setDialogMessage(windowId: string, message: string): void {
 // ---- Internal Helpers ----
 
 /**
+ * Shared implementation for the convenience dialogue functions. Opens a typed dialogue with a single OK button and
+ * resolves when the dialogue is closed by any means.
+ *
+ * @param type - Visual dialogue type controlling the colour scheme.
+ * @param title - Title displayed in the dialogue header.
+ * @param message - Optional body text.
+ * @param options - Optional overrides for width, placement, or close behaviour.
+ * @internal
+ */
+async function showSimpleDialog(
+  type: 'info' | 'success' | 'warning' | 'error',
+  title: string,
+  message?: string,
+  options?: SimpleDialogOptions,
+): Promise<void> {
+  const handle = openDialogWindow({
+    buttons: [{id: 'ok', label: 'OK', variant: 'primary'}],
+    message,
+    placement: {horizontal: 'center', top: '30%'},
+    title,
+    type,
+    ...options,
+  });
+  await handle.result;
+}
+
+/**
  * Create a deferred promise pair used for lifecycle and result signalling.
  *
  * @returns Deferred object containing promise and resolver.
@@ -222,6 +298,7 @@ function createDeferred<T>(): Deferred<T> {
     resolve = res;
   });
 
+  /* v8 ignore next 3 @preserve */
   if (!resolve) {
     throw new Error('Failed to initialize deferred promise');
   }
@@ -230,9 +307,9 @@ function createDeferred<T>(): Deferred<T> {
 }
 
 /**
- * Resolve the "opened" lifecycle once and trigger optional hooks.
+ * Resolve the "opened" lifecycle at once and trigger optional hooks.
  *
- * @param windowId - Unique dialog window ID.
+ * @param windowId - Unique dialogue window ID.
  * @internal
  */
 function resolveOpened(windowId: string): void {
@@ -248,9 +325,9 @@ function resolveOpened(windowId: string): void {
 }
 
 /**
- * Resolve the "shown" lifecycle once and trigger optional hooks.
+ * Resolve the "shown" lifecycle at once and trigger optional hooks.
  *
- * @param windowId - Unique dialog window ID.
+ * @param windowId - Unique dialogue window ID.
  * @internal
  */
 function resolveShown(windowId: string): void {
@@ -266,12 +343,12 @@ function resolveShown(windowId: string): void {
 }
 
 /**
- * Resolve the final dialog result once and clear stored dialog state.
+ * Resolve the final dialogue result at once and clear stored dialogue state.
  *
- * @param windowId - Unique dialog window ID.
+ * @param windowId - Unique dialogue window ID.
  * @param source - Close source that produced this final result.
  * @param details - Optional result details like button and payload.
- * @param details.buttonId - Optional ID of the button that caused dialog closure.
+ * @param details.buttonId - Optional ID of the button that caused dialogue closure.
  * @param details.payload - Optional payload returned with the close result.
  * @internal
  */
@@ -300,9 +377,9 @@ function resolveResult(
 }
 
 /**
- * Close the backing Electron window of a dialog if it is still alive.
+ * Close the backing Electron window of a dialogue if it is still alive.
  *
- * @param windowId - Unique dialog window ID.
+ * @param windowId - Unique dialogue window ID.
  * @internal
  */
 function closeWindow(windowId: string): void {
@@ -314,12 +391,12 @@ function closeWindow(windowId: string): void {
 }
 
 /**
- * Finalize a dialog closure flow by closing the window and resolving the result.
+ * Finalize a dialogue closure flow by closing the window and resolving the result.
  *
- * @param windowId - Unique dialog window ID.
+ * @param windowId - Unique dialogue window ID.
  * @param source - Close source that should be written to the final result.
  * @param details - Optional result details like button and payload.
- * @param details.buttonId - Optional ID of the button that caused dialog closure.
+ * @param details.buttonId - Optional ID of the button that caused dialogue closure.
  * @param details.payload - Optional payload returned with the close result.
  * @internal
  */

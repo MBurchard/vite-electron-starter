@@ -1,9 +1,10 @@
 /**
  * modules/electron/src/windowMgt/dialog/types.ts
  *
- * @file Public dialog service contracts for backend callers.
+ * @file Public dialogue service contracts for backend callers.
  */
 
+import type {WindowPlacement} from '@common/core/window.js';
 import type {
   DialogActionEvent,
   DialogClosedEvent,
@@ -13,7 +14,21 @@ import type {
 import type {DialogResult} from '@common/dialog/types.js';
 
 /**
- * Optional lifecycle hooks invoked during dialog open/show/action/close phases.
+ * Optional overrides for convenience dialogue functions (showInfo, showWarning, etc.).
+ */
+export interface SimpleDialogOptions {
+  /** Optional fixed width in pixels. Defaults to 500. */
+  width?: number;
+  /** Optional placement strategy for dialogue positioning. */
+  placement?: WindowPlacement;
+  /** Whether the header close button should be available. Defaults to true. */
+  closableByX?: boolean;
+  /** Whether ESC should dismiss the dialogue. Defaults to true. */
+  closableByEsc?: boolean;
+}
+
+/**
+ * Optional lifecycle hooks invoked during dialogue open/show/action/close phases.
  */
 export interface DialogLifecycleHooks {
   onOpened?: (event: DialogOpenedEvent) => void;
@@ -23,7 +38,7 @@ export interface DialogLifecycleHooks {
 }
 
 /**
- * Options controlling the dialog BrowserWindow creation.
+ * Options controlling the dialogue BrowserWindow creation.
  */
 export interface OpenDialogWindowOptions {
   withDevTools?: boolean;

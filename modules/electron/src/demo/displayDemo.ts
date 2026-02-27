@@ -7,14 +7,20 @@
  * @author Martin Burchard
  */
 import type {Display, WindowPlacement} from '@common/core/window.js';
-import type {DialogType} from '@common/dialog/types.js';
 import type {BrowserWindow} from 'electron';
 import {IpcDemoChannels} from '@common/demo/ipc.js';
 import {delay} from '@common/utils.js';
 import {broadcast, handleFromRenderer, offFromRenderer, onFromRenderer, removeHandler} from '../ipc.js';
 import {getLogger} from '../logging/index.js';
 import {DISPLAY_WATCHER} from '../utils/DisplayWatcher.js';
-import {openDialogWindow, setDialogMessage} from '../windowMgt/dialog/index.js';
+import {
+  openDialogWindow,
+  setDialogMessage,
+  showError,
+  showInfo,
+  showSuccess,
+  showWarning,
+} from '../windowMgt/dialog/index.js';
 import {createWindow} from '../windowMgt/WindowManager.js';
 
 const log = getLogger('electron.demo.display');
@@ -90,7 +96,7 @@ function showDisplayDemo(mainWindow: BrowserWindow) {
 }
 
 /**
- * Open the startup dialog demo, stream progress lines, and close it after a short delay.
+ * Open the startup dialogue demo, stream progress lines, and close it after a short delay.
  */
 function showStartupDialogDemo() {
   const STARTUP_MESSAGES = [
@@ -159,21 +165,21 @@ function showDialogTypeDemo() {
   });
 
   confirm.result.then((result) => {
-    if (!result.buttonId) {
+    const showFn = {
+      error: showError,
+      info: showInfo,
+      success: showSuccess,
+      warning: showWarning,
+    }[result.buttonId ?? ''];
+    if (!showFn) {
       return;
     }
-
-    const type = result.buttonId as DialogType;
-    openDialogWindow({
-      type,
-      title: `${type.charAt(0).toUpperCase()}${type.slice(1)} Dialog`,
-      message: `This is a ${type} dialog.\nIt uses the ${type} colour scheme.`,
-      placement,
-      buttons: [
-        {id: 'ok', label: 'OK', variant: 'primary'},
-      ],
+    const type = result.buttonId!;
+    const title = `${type.charAt(0).toUpperCase()}${type.slice(1)} Dialogue`;
+    showFn(title, `This is a ${type} dialogue.\nIt uses the ${type} colour scheme.`).catch((reason) => {
+      log.error('Error while showing follow-up dialogue:', reason);
     });
   }).catch((reason) => {
-    log.error('Error while showing dialog type demo:', reason);
+    log.error('Error while showing dialogue type demo:', reason);
   });
 }
