@@ -64,7 +64,6 @@ configureLogging({
   },
   root: {
     appender: ['CONSOLE', 'BACKEND'],
-    includeCallSite: true,
     level: 'DEBUG',
   },
 });
