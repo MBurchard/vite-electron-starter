@@ -5,6 +5,7 @@ coverage
 dist
 dist-electron
 docs
+.pnpm-store
 releases
 
 # local env files
