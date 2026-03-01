@@ -15,10 +15,16 @@ export const IpcDemoChannels = {
   getDisplayData: 'getDisplayData',
   // Main -> Renderer: broadcast updated display list on layout change
   updateDisplayData: 'updateDisplayData',
-  // Renderer -> Main: run startup dialog sequence demo with progressive status updates
+  // Renderer -> Main: run a startup dialogue sequence demo with progressive status updates
   showStartupDialogDemo: 'showStartupDialogDemo',
-  // Renderer -> Main: show a confirm dialog with buttons for each dialog type
+  // Renderer -> Main: show a confirmation dialogue with buttons for each dialogue type
   showDialogTypeDemo: 'showDialogTypeDemo',
+  // Renderer -> Main: show a success dialogue on the primary screen
+  showScreenPrimaryDemo: 'showScreenPrimaryDemo',
+  // Renderer -> Main: show a success dialogue on the app (main window) screen
+  showScreenAppDemo: 'showScreenAppDemo',
+  // Renderer -> Main: show a success dialogue on the active (cursor) screen after 5s delay
+  showScreenActiveDemo: 'showScreenActiveDemo',
 } as const;
 
 export type DemoIpcChannel = typeof IpcDemoChannels[keyof typeof IpcDemoChannels];

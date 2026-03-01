@@ -77,6 +77,34 @@ function renderBaseLayout() {
     backend.send(IpcDemoChannels.showDialogTypeDemo);
   });
   btnContainer.appendChild(dialogTypeBtn);
+
+  const screenRow = document.createElement('div');
+  screenRow.className = 'dialog-buttons';
+  document.querySelector('#app')!.appendChild(screenRow);
+
+  const primaryBtn = document.createElement('button');
+  primaryBtn.className = 'btn btn-secondary';
+  primaryBtn.textContent = 'Primary Screen';
+  primaryBtn.addEventListener('click', () => {
+    backend.send(IpcDemoChannels.showScreenPrimaryDemo);
+  });
+  screenRow.appendChild(primaryBtn);
+
+  const appBtn = document.createElement('button');
+  appBtn.className = 'btn btn-secondary';
+  appBtn.textContent = 'App Screen';
+  appBtn.addEventListener('click', () => {
+    backend.send(IpcDemoChannels.showScreenAppDemo);
+  });
+  screenRow.appendChild(appBtn);
+
+  const activeBtn = document.createElement('button');
+  activeBtn.className = 'btn btn-secondary';
+  activeBtn.textContent = 'Active Screen (5s)';
+  activeBtn.addEventListener('click', () => {
+    backend.send(IpcDemoChannels.showScreenActiveDemo);
+  });
+  screenRow.appendChild(activeBtn);
 }
 
 /**

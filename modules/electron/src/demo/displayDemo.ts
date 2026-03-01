@@ -75,6 +75,9 @@ function showDisplayDemo(mainWindow: BrowserWindow) {
   demoController.whenWindowReady.then(() => {
     onFromRenderer(IpcDemoChannels.showStartupDialogDemo, showStartupDialogDemo);
     onFromRenderer(IpcDemoChannels.showDialogTypeDemo, showDialogTypeDemo);
+    onFromRenderer(IpcDemoChannels.showScreenPrimaryDemo, showScreenPrimaryDemo);
+    onFromRenderer(IpcDemoChannels.showScreenAppDemo, showScreenAppDemo);
+    onFromRenderer(IpcDemoChannels.showScreenActiveDemo, showScreenActiveDemo);
   }).catch((reason) => {
     log.error('Display demo window failed to load:', reason);
   });
@@ -89,6 +92,9 @@ function showDisplayDemo(mainWindow: BrowserWindow) {
     DISPLAY_WATCHER.off('update', onDisplayUpdate);
     offFromRenderer(IpcDemoChannels.showStartupDialogDemo, showStartupDialogDemo);
     offFromRenderer(IpcDemoChannels.showDialogTypeDemo, showDialogTypeDemo);
+    offFromRenderer(IpcDemoChannels.showScreenPrimaryDemo, showScreenPrimaryDemo);
+    offFromRenderer(IpcDemoChannels.showScreenAppDemo, showScreenAppDemo);
+    offFromRenderer(IpcDemoChannels.showScreenActiveDemo, showScreenActiveDemo);
     if (!mainWindow.isDestroyed()) {
       mainWindow.show();
     }
@@ -181,5 +187,40 @@ function showDialogTypeDemo() {
     });
   }).catch((reason) => {
     log.error('Error while showing dialogue type demo:', reason);
+  });
+}
+
+/**
+ * Show a success dialogue on the primary display.
+ */
+function showScreenPrimaryDemo() {
+  showSuccess('Primary Screen', 'This dialogue opened on the primary display.', {
+    placement: {screen: 'primary', horizontal: 'center', top: '30%'},
+  }).catch((reason) => {
+    log.error('Error while showing primary screen demo:', reason);
+  });
+}
+
+/**
+ * Show a success dialogue on the same display as the main application window.
+ */
+function showScreenAppDemo() {
+  showSuccess('App Screen', 'This dialogue opened on the main window display.', {
+    placement: {screen: 'app', horizontal: 'center', top: '30%'},
+  }).catch((reason) => {
+    log.error('Error while showing app screen demo:', reason);
+  });
+}
+
+/**
+ * Show a success dialogue on the display under the cursor, after a 5-second delay.
+ */
+function showScreenActiveDemo() {
+  delay(5_000).then(() => {
+    return showSuccess('Active Screen', 'This dialogue opened on the display under your cursor.', {
+      placement: {screen: 'active', horizontal: 'center', top: '30%'},
+    });
+  }).catch((reason) => {
+    log.error('Error while showing active screen demo:', reason);
   });
 }

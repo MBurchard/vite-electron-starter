@@ -7,7 +7,13 @@
  *
  * @author Martin Burchard
  */
-import type {Display, WindowDisplayInfo, WindowPlacement, WindowPlacementOffset} from '@common/core/window.js';
+import type {
+  Display,
+  TargetScreen,
+  WindowDisplayInfo,
+  WindowPlacement,
+  WindowPlacementOffset,
+} from '@common/core/window.js';
 import type {BrowserWindow} from 'electron';
 import type {RendererListener} from '../ipc.js';
 import {CoreIpcChannels} from '@common/core/ipc.js';
@@ -31,6 +37,28 @@ const controllerRegistry = new Map<string, WindowController>();
  */
 export function getController(windowId: string): WindowController | undefined {
   return controllerRegistry.get(windowId);
+}
+
+// ---- Main Window Registry ----
+
+let mainWindowId: string | undefined;
+
+/**
+ * Register the main application window ID. Used by `screen: 'app'` to resolve the target display.
+ *
+ * @param windowId - The unique window identifier of the main window.
+ */
+export function setMainWindowId(windowId: string): void {
+  mainWindowId = windowId;
+}
+
+/**
+ * Get the registered main application window ID.
+ *
+ * @returns The main window ID, or undefined if not yet registered.
+ */
+export function getMainWindowId(): string | undefined {
+  return mainWindowId;
 }
 
 // ---- Helper: Convert Electron.Display to WindowDisplayInfo ----
@@ -89,7 +117,7 @@ export class WindowController {
    * Create a new WindowController.
    *
    * @param windowId - Unique identifier for the window.
-   * @param contentPage - Logical page name (e.g. 'main', 'dialog') used in log messages.
+   * @param contentPage - Logical page name (e.g. 'main', 'dialogue') used in log messages.
    * @param browserWindow - The BrowserWindow instance to control.
    * @param packModeOrPlacement - Either a boolean for pack mode, or a WindowPlacement (implies no pack mode).
    * @param placement - Optional declarative placement (only when the previous argument is a boolean).
@@ -118,7 +146,7 @@ export class WindowController {
     }
     this.initialContentWidth = browserWindow.getContentSize()[0];
 
-    const display = screen.getDisplayMatching(browserWindow.getBounds());
+    const display = this.resolveTargetDisplay();
     const primaryId = screen.getPrimaryDisplay().id;
     this.currentDisplayId = display.id;
     this.currentDisplay = toWindowDisplayInfo(display, display.id === primaryId);
@@ -238,7 +266,7 @@ export class WindowController {
 
   /**
    * Signal that the window content has finished loading and the window is ready for interaction.
-   * Logs the time from creation to ready. Idempotent: only the first call has effect.
+   * Logs the time from creation to ready. Idempotent: only the first call has an effect.
    */
   public markReady(): void {
     if (this.readySettled) {
@@ -318,6 +346,51 @@ export class WindowController {
     const clampedY = Math.max(minY, Math.min(y, maxY));
 
     this.browserWindow.setPosition(clampedX, clampedY);
+  }
+
+  /**
+   * Resolve the target display based on the `screen` property of the placement configuration.
+   * When a target screen is specified, the window is moved to the target display's work area
+   * so that the following placement calculations use the correct coordinates.
+   *
+   * @returns The resolved Electron display.
+   */
+  private resolveTargetDisplay(): Electron.Display {
+    const targetScreen: TargetScreen | undefined = this.placement?.screen;
+
+    if (!targetScreen) {
+      return screen.getDisplayMatching(this.browserWindow.getBounds());
+    }
+
+    let display: Electron.Display;
+    switch (targetScreen) {
+      case 'primary':
+        display = screen.getPrimaryDisplay();
+        break;
+      case 'app': {
+        const mainId = mainWindowId;
+        const mainController = mainId ? controllerRegistry.get(mainId) : undefined;
+        if (mainController) {
+          display = screen.getDisplayMatching(mainController.browserWindow.getBounds());
+        } else {
+          log.warn(
+            `Window '${this.contentPage}' (${this.windowId}): screen 'app' requested but no main window` +
+            ' registered; falling back to primary display.',
+          );
+          display = screen.getPrimaryDisplay();
+        }
+        break;
+      }
+      case 'active':
+        display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+        break;
+    }
+
+    // Move the window onto the target display so placement calculations use the right workArea
+    const workArea = display.workArea;
+    this.browserWindow.setPosition(workArea.x, workArea.y);
+
+    return display;
   }
 
   /**

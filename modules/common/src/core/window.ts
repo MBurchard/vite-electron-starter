@@ -31,9 +31,19 @@ export type WindowPlacementHorizontal = 'left' | 'center' | 'right';
 export type WindowPlacementVertical = 'top' | 'center' | 'bottom';
 
 /**
+ * Target screen selection strategy for window placement.
+ *
+ * - `'primary'` - The OS primary display.
+ * - `'app'` - The display containing the main application window.
+ * - `'active'` - The display under the mouse cursor.
+ */
+export type TargetScreen = 'primary' | 'app' | 'active';
+
+/**
  * Declarative placement options for positioning a window in a display work area.
  */
 export interface WindowPlacement {
+  screen?: TargetScreen;
   horizontal?: WindowPlacementHorizontal;
   vertical?: WindowPlacementVertical;
   top?: WindowPlacementOffset;

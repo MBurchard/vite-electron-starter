@@ -21,6 +21,8 @@ const mocks = vi.hoisted(() => {
     // screen
     getDisplayMatching: vi.fn(),
     getPrimaryDisplay: vi.fn(),
+    getCursorScreenPoint: vi.fn(),
+    getDisplayNearestPoint: vi.fn(),
 
     // DisplayWatcher
     displayWatcherOn: vi.fn((event: string, listener: (...args: any[]) => void) => {
@@ -45,6 +47,8 @@ vi.mock('electron', () => ({
   screen: {
     getDisplayMatching: mocks.getDisplayMatching,
     getPrimaryDisplay: mocks.getPrimaryDisplay,
+    getCursorScreenPoint: mocks.getCursorScreenPoint,
+    getDisplayNearestPoint: mocks.getDisplayNearestPoint,
   },
 }));
 
@@ -71,7 +75,8 @@ vi.mock('../logging/index.js', () => ({
 
 // ---- Module import (after mocks) ----
 
-const {WindowController, getController} = await import('../windowMgt/WindowController.js');
+const {WindowController, getController, setMainWindowId, getMainWindowId} =
+  await import('../windowMgt/WindowController.js');
 
 // ---- Test helpers ----
 
@@ -115,6 +120,7 @@ function createMockWindow(bounds: WindowBounds = {x: 100, y: 100, width: 800, he
       currentBounds = {...currentBounds, x, y};
     }),
     show: vi.fn(),
+    close: vi.fn(),
     setOpacity: vi.fn(),
     isVisible: vi.fn(() => false),
     isDestroyed: vi.fn(() => false),
@@ -201,6 +207,35 @@ describe('windowController', () => {
 
       expect(win.on).toHaveBeenCalledWith('moved', expect.any(Function));
       controller.dispose();
+    });
+
+    it('should accept a WindowPlacement as fourth parameter (shorthand without pack mode)', () => {
+      const win = createMockWindow();
+      const controller = new WindowController('test-window', 'test', win as any, {horizontal: 'right'});
+
+      // Pack mode should be off: content size reports are ignored
+      const packListener = getRegisteredListener('rendererContentSizeChanged')!;
+      packListener({}, 'test-window', 400, 300);
+      expect(win.setContentSize).not.toHaveBeenCalled();
+
+      // Placement should be active: applyPlacement uses the horizontal: 'right' value
+      controller.applyPlacement();
+      // x = workArea.x + workArea.width - bounds.width = 0 + 1920 - 800 = 1120
+      expect(win.setPosition).toHaveBeenCalledWith(1120, expect.any(Number));
+      controller.dispose();
+    });
+
+    it('should close the window when it is not visible after the show timeout', () => {
+      vi.useFakeTimers();
+      const win = createMockWindow();
+      const controller = new WindowController('test-window', 'test', win as any, false);
+
+      vi.advanceTimersByTime(5000);
+
+      expect(mocks.error).toHaveBeenCalledWith(expect.stringContaining('not visible after 5000ms'));
+      expect(win.close).toHaveBeenCalledOnce();
+      controller.dispose();
+      vi.useRealTimers();
     });
   });
 
@@ -300,6 +335,116 @@ describe('windowController', () => {
       expect(win.setPosition).toHaveBeenCalledWith(100, 104);
       controller.dispose();
     });
+
+    it('should place the window using a right pixel offset', () => {
+      const win = createMockWindow();
+      const controller = new WindowController('test-window', 'test', win as any, true, {right: 50});
+
+      const packListener = getRegisteredListener('rendererContentSizeChanged')!;
+      packListener({}, 'test-window', 400, 300);
+
+      // x = workArea.x + workArea.width - bounds.width - right = 0 + 1920 - 800 - 50 = 1070
+      expect(win.setPosition).toHaveBeenCalledWith(1070, expect.any(Number));
+      controller.dispose();
+    });
+
+    it('should place the window using a bottom pixel offset', () => {
+      const win = createMockWindow();
+      const controller = new WindowController('test-window', 'test', win as any, true, {bottom: 40});
+
+      const packListener = getRegisteredListener('rendererContentSizeChanged')!;
+      packListener({}, 'test-window', 400, 300);
+
+      // y = workArea.y + workArea.height - bounds.height - bottom = 0 + 1040 - 300 - 40 = 700
+      expect(win.setPosition).toHaveBeenCalledWith(expect.any(Number), 700);
+      controller.dispose();
+    });
+
+    it('should align to horizontal left', () => {
+      const win = createMockWindow();
+      const controller = new WindowController('test-window', 'test', win as any, true, {horizontal: 'left'});
+
+      const packListener = getRegisteredListener('rendererContentSizeChanged')!;
+      packListener({}, 'test-window', 400, 300);
+
+      expect(win.setPosition).toHaveBeenCalledWith(0, expect.any(Number));
+      controller.dispose();
+    });
+
+    it('should align to horizontal right', () => {
+      const win = createMockWindow();
+      const controller = new WindowController('test-window', 'test', win as any, true, {horizontal: 'right'});
+
+      const packListener = getRegisteredListener('rendererContentSizeChanged')!;
+      packListener({}, 'test-window', 400, 300);
+
+      // x = workArea.x + workArea.width - bounds.width = 0 + 1920 - 800 = 1120
+      expect(win.setPosition).toHaveBeenCalledWith(1120, expect.any(Number));
+      controller.dispose();
+    });
+
+    it('should align to vertical top', () => {
+      const win = createMockWindow();
+      const controller = new WindowController('test-window', 'test', win as any, true, {vertical: 'top'});
+
+      const packListener = getRegisteredListener('rendererContentSizeChanged')!;
+      packListener({}, 'test-window', 400, 300);
+
+      expect(win.setPosition).toHaveBeenCalledWith(expect.any(Number), 0);
+      controller.dispose();
+    });
+
+    it('should align to vertical bottom', () => {
+      const win = createMockWindow();
+      const controller = new WindowController('test-window', 'test', win as any, true, {vertical: 'bottom'});
+
+      const packListener = getRegisteredListener('rendererContentSizeChanged')!;
+      packListener({}, 'test-window', 400, 300);
+
+      // y = workArea.y + workArea.height - bounds.height = 0 + 1040 - 300 = 740
+      expect(win.setPosition).toHaveBeenCalledWith(expect.any(Number), 740);
+      controller.dispose();
+    });
+
+    it('should warn and use 0 for an invalid offset string', () => {
+      const win = createMockWindow();
+      const controller = new WindowController('test-window', 'test', win as any, true, {
+        top: 'abc' as any,
+      });
+
+      const packListener = getRegisteredListener('rendererContentSizeChanged')!;
+      packListener({}, 'test-window', 400, 300);
+
+      expect(mocks.warn).toHaveBeenCalledWith(
+        'Window \'test\' (test-window): invalid placement \'top\' (abc); using 0.',
+      );
+      // With top=0 the window sits at workArea.y = 0
+      expect(win.setPosition).toHaveBeenCalledWith(expect.any(Number), 0);
+      controller.dispose();
+    });
+  });
+
+  // ---- markVisible ----
+
+  describe('markVisible', () => {
+    it('should be idempotent: second markVisible does not log again', () => {
+      const win = createMockWindow();
+      const controller = new WindowController('test-window', 'test', win as any, false);
+
+      controller.markVisible();
+      const visibleLogs = mocks.debug.mock.calls.filter(
+        (args: any[]) => typeof args[0] === 'string' && args[0].includes('visible after'),
+      );
+      expect(visibleLogs).toHaveLength(1);
+
+      controller.markVisible();
+      const visibleLogsAfter = mocks.debug.mock.calls.filter(
+        (args: any[]) => typeof args[0] === 'string' && args[0].includes('visible after'),
+      );
+      expect(visibleLogsAfter).toHaveLength(1);
+
+      controller.dispose();
+    });
   });
 
   // ---- Center ----
@@ -322,6 +467,31 @@ describe('windowController', () => {
       controller.dispose();
       win.setPosition.mockClear();
       controller.center();
+
+      expect(win.setPosition).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---- applyPlacement guards ----
+
+  describe('applyPlacement', () => {
+    it('should not position when no placement is set', () => {
+      const win = createMockWindow();
+      const controller = new WindowController('test-window', 'test', win as any, false);
+
+      controller.applyPlacement();
+
+      expect(win.setPosition).not.toHaveBeenCalled();
+      controller.dispose();
+    });
+
+    it('should not position when disposed', () => {
+      const win = createMockWindow();
+      const controller = new WindowController('test-window', 'test', win as any, false, {horizontal: 'center'});
+
+      controller.dispose();
+      win.setPosition.mockClear();
+      controller.applyPlacement();
 
       expect(win.setPosition).not.toHaveBeenCalled();
     });
@@ -411,6 +581,24 @@ describe('windowController', () => {
       expect(win.setContentSize).toHaveBeenCalledWith(800, 200);
       controller.dispose();
     });
+
+    it('should ignore display change checks after dispose', () => {
+      const win = createMockWindow();
+      const controller = new WindowController('test-window', 'test', win as any, false);
+
+      // Capture the listener before dispose removes it from the map
+      const updateListeners = [...(mocks.displayWatcherListeners.get('update') ?? [])];
+      expect(updateListeners).toHaveLength(1);
+
+      controller.dispose();
+      mocks.debug.mockClear();
+      mocks.getDisplayMatching.mockReturnValue(SECONDARY_DISPLAY);
+
+      // Simulate a late callback reaching the already-disposed controller
+      updateListeners.forEach(cb => cb([]));
+
+      expect(mocks.debug).not.toHaveBeenCalledWith(expect.stringContaining('Display changed'));
+    });
   });
 
   // ---- getController (registry) ----
@@ -499,6 +687,101 @@ describe('windowController', () => {
 
       await expect(controller.whenWindowReady).resolves.toBeUndefined();
       controller.dispose();
+    });
+  });
+
+  // ---- Screen Targeting ----
+
+  describe('screen targeting', () => {
+    it('should use the primary display when screen is "primary"', () => {
+      const win = createMockWindow();
+      mocks.getPrimaryDisplay.mockReturnValue(SECONDARY_DISPLAY);
+
+      const controller = new WindowController('test-window', 'test', win as any, false, {
+        screen: 'primary',
+        horizontal: 'center',
+      });
+
+      // Window should have been moved to the target display's workArea origin
+      expect(win.setPosition).toHaveBeenCalledWith(SECONDARY_DISPLAY.workArea.x, SECONDARY_DISPLAY.workArea.y);
+      controller.dispose();
+    });
+
+    it('should use the main window display when screen is "app"', () => {
+      // Create a "main window" on the secondary display
+      mocks.getDisplayMatching.mockReturnValue(PRIMARY_DISPLAY);
+      const mainWin = createMockWindow({x: 100, y: 100, width: 800, height: 600});
+      const mainController = new WindowController('main-window', 'main', mainWin as any, false);
+      setMainWindowId('main-window');
+
+      // Now create the target window with screen: 'app'
+      // getDisplayMatching should be called with the main window's bounds
+      mocks.getDisplayMatching.mockImplementation((bounds: WindowBounds) => {
+        if (bounds.x === 100 && bounds.y === 100) {
+          return SECONDARY_DISPLAY;
+        }
+        return PRIMARY_DISPLAY;
+      });
+
+      const win = createMockWindow();
+      const controller = new WindowController('test-window', 'test', win as any, false, {
+        screen: 'app',
+        horizontal: 'center',
+      });
+
+      // Window should be moved to the secondary display's workArea
+      expect(win.setPosition).toHaveBeenCalledWith(SECONDARY_DISPLAY.workArea.x, SECONDARY_DISPLAY.workArea.y);
+
+      controller.dispose();
+      mainController.dispose();
+    });
+
+    it('should fall back to primary with a warning when screen is "app" but no main window is registered', () => {
+      // Ensure no main window is registered by setting a non-existent ID
+      setMainWindowId('nonexistent');
+      mocks.getPrimaryDisplay.mockReturnValue(SECONDARY_DISPLAY);
+
+      const win = createMockWindow();
+      const controller = new WindowController('test-window', 'test', win as any, false, {
+        screen: 'app',
+        horizontal: 'center',
+      });
+
+      expect(mocks.warn).toHaveBeenCalledWith(expect.stringContaining('no main window'));
+      expect(win.setPosition).toHaveBeenCalledWith(SECONDARY_DISPLAY.workArea.x, SECONDARY_DISPLAY.workArea.y);
+      controller.dispose();
+    });
+
+    it('should use the cursor display when screen is "active"', () => {
+      const cursorPoint = {x: 2000, y: 500};
+      mocks.getCursorScreenPoint.mockReturnValue(cursorPoint);
+      mocks.getDisplayNearestPoint.mockReturnValue(SECONDARY_DISPLAY);
+
+      const win = createMockWindow();
+      const controller = new WindowController('test-window', 'test', win as any, false, {
+        screen: 'active',
+        horizontal: 'center',
+      });
+
+      expect(mocks.getCursorScreenPoint).toHaveBeenCalled();
+      expect(mocks.getDisplayNearestPoint).toHaveBeenCalledWith(cursorPoint);
+      expect(win.setPosition).toHaveBeenCalledWith(SECONDARY_DISPLAY.workArea.x, SECONDARY_DISPLAY.workArea.y);
+      controller.dispose();
+    });
+
+    it('should use getDisplayMatching (unchanged behaviour) when no screen is set', () => {
+      const win = createMockWindow();
+      const controller = new WindowController('test-window', 'test', win as any, false);
+
+      expect(mocks.getDisplayMatching).toHaveBeenCalledWith(win.getBounds());
+      // setPosition should NOT have been called from resolveTargetDisplay (no screen relocation)
+      expect(win.setPosition).not.toHaveBeenCalled();
+      controller.dispose();
+    });
+
+    it('should track the main window ID via getMainWindowId', () => {
+      setMainWindowId('my-main');
+      expect(getMainWindowId()).toBe('my-main');
     });
   });
 

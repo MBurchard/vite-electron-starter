@@ -13,6 +13,7 @@ import {app} from 'electron';
 import {registerDisplayDemoHandlers} from './demo/displayDemo.js';
 import {handleFromRenderer} from './ipc.js';
 import {getLogger} from './logging/index.js';
+import {setMainWindowId} from './windowMgt/WindowController.js';
 import {createWindow} from './windowMgt/WindowManager.js';
 
 const log = getLogger('electron.main');
@@ -39,6 +40,7 @@ app.whenReady().then(() => {
   if (!mainController) {
     throw new Error('Main window could not be created');
   }
+  setMainWindowId(mainController.windowId);
 
   mainController.whenWindowReady.then(() => {
     registerDisplayDemoHandlers(mainController.browserWindow);
