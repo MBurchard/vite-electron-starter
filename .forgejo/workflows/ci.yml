@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  ci:
+    runs-on: podman
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          check-latest: true
+
+      - name: Verify Node
+        run: node -v
+
+      - name: Enable Corepack and prepare pnpm
+        run: |
+          corepack enable
+          pnpm --version
+          pnpm config set store-dir .pnpm-store
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: .pnpm-store
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm i --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Run tests with coverage
+        run: pnpm coverage
+
+      - name: Build
+        run: pnpm build
+
+      - name: Archive code coverage results
+        uses: https://code.forgejo.org/forgejo/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: coverage/**
+          retention-days: 30
